@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { DFA, Problem } from '@/types/automata';
 import { runDFA, findCounterexample, parseRegexToDFA, testRegex, dfaToRegex } from '@/lib/logic';
 
@@ -20,7 +20,7 @@ type CanvasEdge = {
   symbols: string;
 };
 
-const PROBLEMS: Problem[] = [
+const INITIAL_PROBLEMS: Problem[] = [
   {
     id: 'dfa-ends-01',
     type: 'dfa-design',
@@ -123,7 +123,8 @@ type TestResult = {
 };
 
 export default function Home() {
-  const [activeProblem, setActiveProblem] = useState<Problem>(PROBLEMS[0]);
+  const [problems, setProblems] = useState<Problem[]>(INITIAL_PROBLEMS);
+  const [activeProblem, setActiveProblem] = useState<Problem>(INITIAL_PROBLEMS[0]);
   const [editorMode, setEditorMode] = useState<'canvas' | 'json'>('canvas');
 
   // Canvas State
@@ -135,7 +136,7 @@ export default function Home() {
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
 
   // Fallback JSON State
-  const [dfaJson, setDfaJson] = useState<string>(JSON.stringify(PROBLEMS[0].answerDFA, null, 2));
+  const [dfaJson, setDfaJson] = useState<string>(JSON.stringify(INITIAL_PROBLEMS[0].answerDFA, null, 2));
   const [regexInput, setRegexInput] = useState<string>('');
 
   // Results State
@@ -144,6 +145,7 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Convert Canvas Graph -> DFA object
   const graphToDFA = (): DFA => {
@@ -179,6 +181,52 @@ export default function Home() {
     setErrorMessage(null);
     setRegexInput('');
     setDfaJson(JSON.stringify(problem.answerDFA, null, 2));
+  };
+
+  // Schema Validation
+  const validateProblem = (item: any): item is Problem => {
+    return (
+      typeof item === 'object' &&
+      item !== null &&
+      typeof item.id === 'string' &&
+      ['dfa-design', 'dfa-to-regex', 'regex-to-dfa'].includes(item.type) &&
+      typeof item.title === 'string' &&
+      Array.isArray(item.alphabet) &&
+      item.answerDFA &&
+      Array.isArray(item.testCases)
+    );
+  };
+
+  // File Upload Handler
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        const importedList = Array.isArray(parsed) ? parsed : [parsed];
+        const validProblems = importedList.filter(validateProblem);
+
+        if (validProblems.length === 0) {
+          setErrorMessage('No valid problem definitions found in the JSON file.');
+          return;
+        }
+
+        setProblems((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const newProblems = validProblems.filter((p) => !existingIds.has(p.id));
+          return [...prev, ...newProblems];
+        });
+
+        handleProblemChange(validProblems[0]);
+      } catch (err) {
+        setErrorMessage('Failed to parse JSON file. Check for syntax errors.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   // --- Canvas Interaction Handlers ---
@@ -260,46 +308,41 @@ export default function Home() {
 
   // --- Run / Grade Solution ---
   const handleRun = () => {
-  setErrorMessage(null);
-  setCounterexample(null);
+    setErrorMessage(null);
+    setCounterexample(null);
 
-  let studentDFA: DFA;
+    let studentDFA: DFA;
 
-  try {
-    if (activeProblem.type === 'dfa-to-regex') {
-      // 1. Convert user's regex into a DFA via Thompson's Construction + Powerset
-      if (!regexInput.trim()) {
-        setErrorMessage('Please enter a regular expression.');
-        return;
+    try {
+      if (activeProblem.type === 'dfa-to-regex') {
+        if (!regexInput.trim()) {
+          setErrorMessage('Please enter a regular expression.');
+          return;
+        }
+        studentDFA = parseRegexToDFA(regexInput, activeProblem.alphabet);
+      } else if (editorMode === 'canvas') {
+        studentDFA = graphToDFA();
+      } else {
+        studentDFA = JSON.parse(dfaJson);
       }
-      studentDFA = parseRegexToDFA(regexInput, activeProblem.alphabet);
-    } else if (editorMode === 'canvas') {
-      // 2. Extract DFA from Canvas
-      studentDFA = graphToDFA();
-    } else {
-      // 3. Parse DFA from JSON Editor
-      studentDFA = JSON.parse(dfaJson);
+    } catch (e: any) {
+      setErrorMessage(e.message || 'Error processing input.');
+      return;
     }
-  } catch (e: any) {
-    setErrorMessage(e.message || 'Error processing input.');
-    return;
-  }
 
-  // Evaluate test suite against converted student DFA
-  const results: TestResult[] = activeProblem.testCases.map((tc) => {
-    const actual = runDFA(studentDFA, tc.input);
-    return {
-      input: tc.input === '' ? 'ε (empty string)' : tc.input,
-      expected: tc.expected,
-      actual,
-      passed: actual === tc.expected,
-    };
-  });
-  setTestResults(results);
+    const results: TestResult[] = activeProblem.testCases.map((tc) => {
+      const actual = runDFA(studentDFA, tc.input);
+      return {
+        input: tc.input === '' ? 'ε (empty string)' : tc.input,
+        expected: tc.expected,
+        actual,
+        passed: actual === tc.expected,
+      };
+    });
+    setTestResults(results);
 
-  // Perform full mathematical equivalence proof against solution DFA
-  const mismatch = findCounterexample(studentDFA, activeProblem.answerDFA);
-  setCounterexample(mismatch);
+    const mismatch = findCounterexample(studentDFA, activeProblem.answerDFA);
+    setCounterexample(mismatch);
   };
 
   return (
@@ -308,20 +351,38 @@ export default function Home() {
         
         {/* Left Column: Problem & Editor */}
         <div className="lg:col-span-7 flex flex-col gap-6">
-          <div className="flex gap-2 border-b border-slate-800 pb-4">
-            {PROBLEMS.map((prob) => (
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4 overflow-x-auto gap-2">
+            <div className="flex gap-2">
+              {problems.map((prob) => (
+                <button
+                  key={prob.id}
+                  onClick={() => handleProblemChange(prob)}
+                  className={`px-3 py-1.5 rounded text-xs font-semibold whitespace-nowrap transition ${
+                    activeProblem.id === prob.id
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {prob.title}
+                </button>
+              ))}
+            </div>
+
+            <div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".json"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
               <button
-                key={prob.id}
-                onClick={() => handleProblemChange(prob)}
-                className={`px-3 py-1.5 rounded text-xs font-semibold transition ${
-                  activeProblem.id === prob.id
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 rounded text-xs font-semibold whitespace-nowrap transition"
               >
-                {prob.title}
+                + Import JSON
               </button>
-            ))}
+            </div>
           </div>
 
           <header>

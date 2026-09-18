@@ -1,0 +1,26 @@
+[
+  {
+    "id": "custom-starts-with-1",
+    "type": "dfa-design",
+    "title": "DFA: Starts with '1'",
+    "description": "Construct a DFA over {0, 1} that accepts strings starting with '1'.",
+    "alphabet": ["0", "1"],
+    "answerDFA": {
+      "states": ["q0", "q1", "q2"],
+      "alphabet": ["0", "1"],
+      "initialState": "q0",
+      "acceptStates": ["q1"],
+      "transitions": {
+        "q0": { "1": "q1", "0": "q2" },
+        "q1": { "0": "q1", "1": "q1" },
+        "q2": { "0": "q2", "1": "q2" }
+      }
+    },
+    "testCases": [
+      { "input": "101", "expected": true },
+      { "input": "1", "expected": true },
+      { "input": "01", "expected": false },
+      { "input": "", "expected": false }
+    ]
+  }
+]
