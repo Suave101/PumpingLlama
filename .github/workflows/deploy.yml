@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main # Change to 'master' if using master branch
+      - main
 
 permissions:
   contents: read
@@ -21,7 +21,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
 
-    # Sets default working directory for all run commands
     defaults:
       run:
         working-directory: ./src-llama
@@ -56,6 +55,7 @@ jobs:
             ./src-llama/yarn.lock
 
       - name: Setup GitHub Pages Config
+        id: pages
         uses: actions/configure-pages@v5
         with:
           static_site_generator: next
@@ -64,6 +64,8 @@ jobs:
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
 
       - name: Build Next.js App
+        env:
+          NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: ${{ steps.detect-package-manager.outputs.manager }} run build
 
       - name: Upload Artifact
