@@ -5,13 +5,11 @@ on:
     branches:
       - main # Change to 'master' if using master branch
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs in-progress for newer pushes
 concurrency:
   group: 'pages'
   cancel-in-progress: true
@@ -23,6 +21,11 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
 
+    # Sets default working directory for all run commands
+    defaults:
+      run:
+        working-directory: ./src-llama
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -30,11 +33,11 @@ jobs:
       - name: Detect Package Manager
         id: detect-package-manager
         run: |
-          if [ -f "${{ github.workspace }}/src-llama/yarn.lock" ]; then
+          if [ -f "yarn.lock" ]; then
             echo "manager=yarn" >> $GITHUB_OUTPUT
             echo "command=install" >> $GITHUB_OUTPUT
             exit 0
-          elif [ -f "${{ github.workspace }}/src-llama/package.json" ]; then
+          elif [ -f "package.json" ]; then
             echo "manager=npm" >> $GITHUB_OUTPUT
             echo "command=ci" >> $GITHUB_OUTPUT
             exit 0
@@ -48,6 +51,9 @@ jobs:
         with:
           node-version: 20
           cache: ${{ steps.detect-package-manager.outputs.manager }}
+          cache-dependency-path: |
+            ./src-llama/package-lock.json
+            ./src-llama/yarn.lock
 
       - name: Setup GitHub Pages Config
         uses: actions/configure-pages@v5
@@ -63,7 +69,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./out
+          path: ./src-llama/out
 
       - name: Deploy to GitHub Pages
         id: deployment
