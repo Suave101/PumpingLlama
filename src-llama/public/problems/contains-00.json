@@ -1,0 +1,26 @@
+{
+  "id": "contains-00",
+  "type": "dfa-to-regex",
+  "title": "DFA to Regex: Contains \"00\"",
+  "description": "Convert the following DFA accepting strings containing the substring \"00\" into an equivalent Regular Expression.",
+  "alphabet": ["0", "1"],
+  "answerDFA": {
+    "states": ["q0", "q1", "q2"],
+    "alphabet": ["0", "1"],
+    "initialState": "q0",
+    "acceptStates": ["q2"],
+    "transitions": {
+      "q0": { "0": "q1", "1": "q0" },
+      "q1": { "0": "q2", "1": "q0" },
+      "q2": { "0": "q2", "1": "q2" }
+    }
+  },
+  "testCases": [
+    { "input": "00", "expected": true },
+    { "input": "1001", "expected": true },
+    { "input": "1100", "expected": true },
+    { "input": "0101", "expected": false },
+    { "input": "101", "expected": false },
+    { "input": "", "expected": false }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "length-multiple-of-3",
+  "type": "dfa-design",
+  "title": "DFA: Length Multiple of 3",
+  "description": "Construct a DFA over alphabet {0, 1} that accepts any string whose total length is a multiple of 3 (including 0).",
+  "alphabet": ["0", "1"],
+  "answerDFA": {
+    "states": ["q0", "q1", "q2"],
+    "alphabet": ["0", "1"],
+    "initialState": "q0",
+    "acceptStates": ["q0"],
+    "transitions": {
+      "q0": { "0": "q1", "1": "q1" },
+      "q1": { "0": "q2", "1": "q2" },
+      "q2": { "0": "q0", "1": "q0" }
+    }
+  },
+  "testCases": [
+    { "input": "", "expected": true },
+    { "input": "010", "expected": true },
+    { "input": "111111", "expected": true },
+    { "input": "0", "expected": false },
+    { "input": "01", "expected": false },
+    { "input": "1111", "expected": false }
+  ]
+}

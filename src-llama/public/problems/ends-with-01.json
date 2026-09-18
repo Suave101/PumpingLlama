@@ -1,0 +1,25 @@
+{
+  "id": "ends-with-01",
+  "type": "dfa-design",
+  "title": "DFA: Ends with \"01\"",
+  "description": "Construct a DFA over alphabet {0, 1} that accepts strings ending in \"01\".",
+  "alphabet": ["0", "1"],
+  "answerDFA": {
+    "states": ["q0", "q1", "q2"],
+    "alphabet": ["0", "1"],
+    "initialState": "q0",
+    "acceptStates": ["q2"],
+    "transitions": {
+      "q0": { "0": "q1", "1": "q0" },
+      "q1": { "0": "q1", "1": "q2" },
+      "q2": { "0": "q1", "1": "q0" }
+    }
+  },
+  "testCases": [
+    { "input": "01", "expected": true },
+    { "input": "101", "expected": true },
+    { "input": "100", "expected": false },
+    { "input": "0", "expected": false },
+    { "input": "", "expected": false }
+  ]
+}

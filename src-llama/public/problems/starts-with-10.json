@@ -1,0 +1,26 @@
+{
+  "id": "starts-with-10",
+  "type": "dfa-design",
+  "title": "DFA: Starts with \"10\"",
+  "description": "Construct a DFA over alphabet {0, 1} that accepts strings starting with the prefix \"10\".",
+  "alphabet": ["0", "1"],
+  "answerDFA": {
+    "states": ["q0", "q1", "q2", "qTrap"],
+    "alphabet": ["0", "1"],
+    "initialState": "q0",
+    "acceptStates": ["q2"],
+    "transitions": {
+      "q0": { "0": "qTrap", "1": "q1" },
+      "q1": { "0": "q2", "1": "qTrap" },
+      "q2": { "0": "q2", "1": "q2" },
+      "qTrap": { "0": "qTrap", "1": "qTrap" }
+    }
+  },
+  "testCases": [
+    { "input": "10", "expected": true },
+    { "input": "10110", "expected": true },
+    { "input": "010", "expected": false },
+    { "input": "110", "expected": false },
+    { "input": "", "expected": false }
+  ]
+}

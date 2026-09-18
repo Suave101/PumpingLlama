@@ -1,0 +1,28 @@
+{
+  "id": "regex-0-star-11",
+  "type": "regex-to-dfa",
+  "title": "Regex to DFA: (0*)11",
+  "description": "Build a DFA that matches the Regular Expression: (0*)11",
+  "targetRegex": "(0*)11",
+  "alphabet": ["0", "1"],
+  "answerDFA": {
+    "states": ["q0", "q1", "q2", "qTrap"],
+    "alphabet": ["0", "1"],
+    "initialState": "q0",
+    "acceptStates": ["q2"],
+    "transitions": {
+      "q0": { "0": "q0", "1": "q1" },
+      "q1": { "0": "qTrap", "1": "q2" },
+      "q2": { "0": "qTrap", "1": "qTrap" },
+      "qTrap": { "0": "qTrap", "1": "qTrap" }
+    }
+  },
+  "testCases": [
+    { "input": "11", "expected": true },
+    { "input": "011", "expected": true },
+    { "input": "00011", "expected": true },
+    { "input": "110", "expected": false },
+    { "input": "01", "expected": false },
+    { "input": "", "expected": false }
+  ]
+}
