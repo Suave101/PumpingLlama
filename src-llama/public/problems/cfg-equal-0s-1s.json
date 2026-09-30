@@ -1,0 +1,24 @@
+{
+  "id": "cfg-equal-0s-1s",
+  "type": "cfg-design",
+  "title": "CFG: Equal Number of 0s and 1s",
+  "description": "Construct a Context-Free Grammar for the language L = { w ∈ {0, 1}* | #0(w) = #1(w) }.",
+  "alphabet": ["0", "1"],
+  "answerCFG": {
+    "variables": ["S"],
+    "terminals": ["0", "1"],
+    "startVariable": "S",
+    "productions": {
+      "S": ["0S1S", "1S0S", ""]
+    }
+  },
+  "testCases": [
+    { "input": "", "expected": true },
+    { "input": "01", "expected": true },
+    { "input": "10", "expected": true },
+    { "input": "0101", "expected": true },
+    { "input": "0011", "expected": true },
+    { "input": "0", "expected": false },
+    { "input": "001", "expected": false }
+  ]
+}

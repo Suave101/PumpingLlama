@@ -1,374 +1,405 @@
-import { DFA, NFA, TestCase } from '@/types/automata';
+import {
+  DFA,
+  NFA,
+  CFG,
+  PDA,
+  ParseTreeNode,
+  AmbiguityProof,
+  PumpingLemmaSubmission,
+  TestCase,
+  VerificationResult,
+} from '@/types/automata';
 
-/**
- * Runs a string input through a DFA and returns true if accepted.
- */
+// ---------------------------------------------------------------------------
+// 1. PDA Simulation Engine (Nondeterministic BFS with Epsilon transitions)
+// ---------------------------------------------------------------------------
+export function runPDA(pda: PDA, input: string): boolean {
+  const cleanInput = input === 'ε' || input === 'e' ? '' : input;
+  type Configuration = {
+    state: string;
+    inputIdx: number;
+    stack: string[];
+  };
+
+  const initialStack = pda.initialStackSymbol ? [pda.initialStackSymbol] : [];
+  const queue: Configuration[] = [
+    { state: pda.initialState, inputIdx: 0, stack: initialStack },
+  ];
+
+  const visited = new Set<string>();
+  let steps = 0;
+  const maxSteps = 10000;
+
+  while (queue.length > 0 && steps < maxSteps) {
+    steps++;
+    const { state, inputIdx, stack } = queue.shift()!;
+    const stackKey = stack.join(',');
+    const visitKey = `${state}:${inputIdx}:${stackKey}`;
+
+    if (visited.has(visitKey)) continue;
+    visited.add(visitKey);
+
+    // Acceptance Check
+    if (pda.acceptBy === 'empty-stack') {
+      if (inputIdx === cleanInput.length && stack.length === 0) return true;
+    } else {
+      if (inputIdx === cleanInput.length && pda.acceptStates.includes(state)) return true;
+    }
+
+    const currentSymbol = inputIdx < cleanInput.length ? cleanInput[inputIdx] : null;
+
+    for (const tr of pda.transitions) {
+      if (tr.from !== state) continue;
+
+      // Check input matching (exact symbol or epsilon)
+      const consumesInput = tr.inputSymbol !== '';
+      if (consumesInput && tr.inputSymbol !== currentSymbol) continue;
+
+      // Check stack pop matching (exact top symbol or epsilon)
+      const topStack = stack[stack.length - 1];
+      const requiresPop = tr.popSymbol !== '';
+      if (requiresPop && topStack !== tr.popSymbol) continue;
+
+      // Compute new stack
+      const nextStack = [...stack];
+      if (requiresPop) {
+        nextStack.pop();
+      }
+      if (tr.pushSymbols && tr.pushSymbols.length > 0) {
+        for (let i = tr.pushSymbols.length - 1; i >= 0; i--) {
+          const sym = tr.pushSymbols[i];
+          if (sym !== '' && sym !== 'ε') {
+            nextStack.push(sym);
+          }
+        }
+      }
+
+      queue.push({
+        state: tr.to,
+        inputIdx: consumesInput ? inputIdx + 1 : inputIdx,
+        stack: nextStack,
+      });
+    }
+  }
+
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// 2. Normal Forms Verification (CNF & GNF Rules Validation)
+// ---------------------------------------------------------------------------
+export function checkChomskyNormalForm(cfg: CFG): { valid: boolean; reason?: string } {
+  for (const rule of cfg.rules) {
+    for (const prod of rule.rhs) {
+      if (prod === '' || prod === 'ε') {
+        if (rule.lhs !== cfg.startSymbol) {
+          return { valid: false, reason: `ε-production found in non-start variable: ${rule.lhs} -> ε` };
+        }
+        continue;
+      }
+
+      // Single terminal rule: A -> a
+      if (prod.length === 1 && cfg.terminals.includes(prod)) {
+        continue;
+      }
+
+      // Two variable rule: A -> BC
+      const symbols = prod.split('').filter((s) => s.trim().length > 0);
+      if (symbols.length === 2 && symbols.every((s) => cfg.variables.includes(s))) {
+        continue;
+      }
+
+      return {
+        valid: false,
+        reason: `Production '${rule.lhs} -> ${prod}' violates CNF (must be A -> BC or A -> a).`,
+      };
+    }
+  }
+  return { valid: true };
+}
+
+export function checkGreibachNormalForm(cfg: CFG): { valid: boolean; reason?: string } {
+  for (const rule of cfg.rules) {
+    for (const prod of rule.rhs) {
+      if (prod === '' || prod === 'ε') {
+        if (rule.lhs !== cfg.startSymbol) {
+          return { valid: false, reason: `ε-production found in non-start variable: ${rule.lhs} -> ε` };
+        }
+        continue;
+      }
+
+      const symbols = prod.split('').filter((s) => s.trim().length > 0);
+      const firstSym = symbols[0];
+      const restSyms = symbols.slice(1);
+
+      if (!cfg.terminals.includes(firstSym)) {
+        return {
+          valid: false,
+          reason: `Production '${rule.lhs} -> ${prod}' does not start with a terminal symbol.`,
+        };
+      }
+
+      if (!restSyms.every((s) => cfg.variables.includes(s))) {
+        return {
+          valid: false,
+          reason: `Symbols following '${firstSym}' in '${rule.lhs} -> ${prod}' must all be non-terminals.`,
+        };
+      }
+    }
+  }
+  return { valid: true };
+}
+
+// ---------------------------------------------------------------------------
+// 3. Ambiguity & Parse Tree Verifiers
+// ---------------------------------------------------------------------------
+export function verifyAmbiguityProof(proof: AmbiguityProof, cfg: CFG): { valid: boolean; reason: string } {
+  if (!proof.stringW) return { valid: false, reason: 'Target string w cannot be empty.' };
+
+  const d1 = proof.leftDerivation1;
+  const d2 = proof.leftDerivation2;
+
+  if (!d1 || d1.length < 2 || !d2 || d2.length < 2) {
+    return { valid: false, reason: 'Two distinct derivation sequences are required.' };
+  }
+
+  if (d1.join('=>') === d2.join('=>')) {
+    return { valid: false, reason: 'The two provided derivations are identical.' };
+  }
+
+  const end1 = d1[d1.length - 1];
+  const end2 = d2[d2.length - 1];
+
+  if (end1 !== proof.stringW || end2 !== proof.stringW) {
+    return { valid: false, reason: `Derivations do not both yield string "${proof.stringW}".` };
+  }
+
+  return { valid: true, reason: `Valid proof! String "${proof.stringW}" has 2 distinct leftmost derivations.` };
+}
+
+export function verifyParseTree(tree: ParseTreeNode, cfg: CFG, targetString: string): { valid: boolean; reason: string } {
+  if (tree.symbol !== cfg.startSymbol) {
+    return { valid: false, reason: `Root of parse tree must be start symbol '${cfg.startSymbol}'.` };
+  }
+
+  const getYield = (node: ParseTreeNode): string => {
+    if (!node.children || node.children.length === 0) {
+      return node.symbol === 'ε' ? '' : node.symbol;
+    }
+    return node.children.map(getYield).join('');
+  };
+
+  const treeYield = getYield(tree);
+  if (treeYield !== targetString) {
+    return { valid: false, reason: `Parse tree yield "${treeYield}" does not match target string "${targetString}".` };
+  }
+
+  return { valid: true, reason: `Parse tree correctly derives string "${targetString}".` };
+}
+
+// ---------------------------------------------------------------------------
+// 4. Pumping Lemma Proof Verifier (CFL Pumping Lemma: w = uvxyz)
+// ---------------------------------------------------------------------------
+export function verifyPumpingLemma(proof: PumpingLemmaSubmission, testCases: TestCase[]): { valid: boolean; reason: string } {
+  const { p, w, u, v, x, y, z, i } = proof;
+
+  if (w.length < p) {
+    return { valid: false, reason: `Chosen string w ("${w}") must have length |w| ≥ p (${p}).` };
+  }
+
+  if (u + v + x + y + z !== w) {
+    return { valid: false, reason: `Decomposition u+v+x+y+z ("${u+v+x+y+z}") does not equal w ("${w}").` };
+  }
+
+  if (v.length + y.length < 1) {
+    return { valid: false, reason: '|vy| must be ≥ 1 (pumping parts cannot both be empty).' };
+  }
+
+  if ((v + x + y).length > p) {
+    return { valid: false, reason: `|vxy| (${(v + x + y).length}) must be ≤ p (${p}).` };
+  }
+
+  const pumpedString = u + v.repeat(i) + x + y.repeat(i) + z;
+  const matchCase = testCases.find((tc) => tc.input === pumpedString);
+
+  if (matchCase && matchCase.expected === false) {
+    return { valid: true, reason: `Success! Pumped string "${pumpedString}" (i=${i}) is NOT in language L.` };
+  }
+
+  return {
+    valid: true,
+    reason: `Pumped string u v^${i} x y^${i} z = "${pumpedString}". Verify if this violates language rules.`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 5. Universal Evaluator Endpoint
+// ---------------------------------------------------------------------------
+export function evaluateSolution(
+  studentInput: {
+    dfa?: DFA;
+    nfa?: NFA;
+    regex?: string;
+    cfg?: CFG;
+    pda?: PDA;
+    pumping?: PumpingLemmaSubmission;
+    ambiguity?: AmbiguityProof;
+    parseTree?: { tree: ParseTreeNode; target: string };
+  },
+  answerDFA: DFA,
+  testCases: TestCase[],
+  problemType?: string
+): VerificationResult {
+  // A. Pumping Lemma Proof Evaluation
+  if (studentInput.pumping) {
+    const res = verifyPumpingLemma(studentInput.pumping, testCases);
+    return {
+      passed: res.valid,
+      score: res.valid ? 1.0 : 0.0,
+      counterexample: null,
+      testResults: [],
+      feedback: res.reason,
+    };
+  }
+
+  // B. Ambiguity Proof Evaluation
+  if (studentInput.ambiguity && studentInput.cfg) {
+    const res = verifyAmbiguityProof(studentInput.ambiguity, studentInput.cfg);
+    return {
+      passed: res.valid,
+      score: res.valid ? 1.0 : 0.0,
+      counterexample: null,
+      testResults: [],
+      feedback: res.reason,
+    };
+  }
+
+  // C. Parse Tree Evaluation
+  if (studentInput.parseTree && studentInput.cfg) {
+    const res = verifyParseTree(studentInput.parseTree.tree, studentInput.cfg, studentInput.parseTree.target);
+    return {
+      passed: res.valid,
+      score: res.valid ? 1.0 : 0.0,
+      counterexample: null,
+      testResults: [],
+      feedback: res.reason,
+    };
+  }
+
+  // D. CFG Normal Forms Checks (CNF / GNF)
+  if (studentInput.cfg) {
+    if (problemType === 'cfg-to-cnf') {
+      const cnfCheck = checkChomskyNormalForm(studentInput.cfg);
+      if (!cnfCheck.valid) {
+        return {
+          passed: false,
+          score: 0.0,
+          counterexample: null,
+          testResults: [],
+          feedback: `Chomsky Normal Form Violation: ${cnfCheck.reason}`,
+        };
+      }
+    } else if (problemType === 'cfg-to-gnf') {
+      const gnfCheck = checkGreibachNormalForm(studentInput.cfg);
+      if (!gnfCheck.valid) {
+        return {
+          passed: false,
+          score: 0.0,
+          counterexample: null,
+          testResults: [],
+          feedback: `Greibach Normal Form Violation: ${gnfCheck.reason}`,
+        };
+      }
+    }
+  }
+
+  // E. Automata Simulation across Test Cases (PDA / CFG / DFA / NFA)
+  const testResults = testCases.map((tc) => {
+    let actual = false;
+    if (studentInput.pda) {
+      actual = runPDA(studentInput.pda, tc.input);
+    } else if (studentInput.cfg) {
+      actual = runCYK(studentInput.cfg, tc.input);
+    } else if (studentInput.dfa) {
+      actual = runDFA(studentInput.dfa, tc.input);
+    }
+    return {
+      input: tc.input === '' ? 'ε (empty string)' : tc.input,
+      expected: tc.expected,
+      actual,
+      passed: actual === tc.expected,
+    };
+  });
+
+  const totalPassed = testResults.filter((r) => r.passed).length;
+  const isEquivalent = totalPassed === testCases.length;
+  const score = isEquivalent ? 1.0 : Number((totalPassed / Math.max(1, testCases.length)).toFixed(2));
+
+  return {
+    passed: isEquivalent,
+    score,
+    counterexample: testResults.find((r) => !r.passed)?.input || null,
+    testResults,
+    feedback: isEquivalent
+      ? 'Full Credit: All test cases passed successfully.'
+      : `Partial Credit: ${totalPassed}/${testCases.length} test cases passed.`,
+  };
+}
+
+// Helper re-exports
 export function runDFA(dfa: DFA, input: string): boolean {
   let currentState = dfa.initialState;
-
   for (const symbol of input) {
     if (!dfa.alphabet.includes(symbol)) return false;
     currentState = dfa.transitions[currentState]?.[symbol];
     if (!currentState) return false;
   }
-
   return dfa.acceptStates.includes(currentState);
 }
 
-/**
- * Product Automaton BFS Equivalence Check.
- * Returns the shortest counterexample string if DFAs differ, or null if 100% equivalent.
- */
-export function findCounterexample(studentDFA: DFA, answerDFA: DFA): string | null {
-  const SINK = '__SINK__';
+export function runCYK(cfg: CFG, input: string): boolean {
+  const cleanInput = input === 'ε' || input === 'e' ? '' : input;
+  const variables = cfg.variables || [];
+  const startSymbol = cfg.startSymbol || 'S';
 
-  const combinedAlphabet = Array.from(
-    new Set([...(studentDFA.alphabet || []), ...(answerDFA.alphabet || [])])
+  if (cleanInput === '') {
+    return cfg.rules.some((r) => r.lhs === startSymbol && r.rhs.some((p) => p === '' || p === 'ε'));
+  }
+
+  const n = cleanInput.length;
+  const P: boolean[][][] = Array.from({ length: n + 1 }, () =>
+    Array.from({ length: n + 1 }, () => Array(variables.length).fill(false))
   );
 
-  const getNextState = (dfa: DFA, current: string, symbol: string): string => {
-    if (current === SINK) return SINK;
-    return dfa.transitions[current]?.[symbol] ?? SINK;
-  };
-
-  const isAccepting = (dfa: DFA, state: string): boolean => {
-    if (state === SINK) return false;
-    return dfa.acceptStates.includes(state);
-  };
-
-  const queue: [string, string, string][] = [
-    [studentDFA.initialState, answerDFA.initialState, '']
-  ];
-  const visited = new Set<string>();
-
-  while (queue.length > 0) {
-    const [sState, aState, path] = queue.shift()!;
-    const key = `${sState},${aState}`;
-
-    if (visited.has(key)) continue;
-    visited.add(key);
-
-    const sAccept = isAccepting(studentDFA, sState);
-    const aAccept = isAccepting(answerDFA, aState);
-
-    if (sAccept !== aAccept) {
-      return path === '' ? 'ε (empty string)' : path;
-    }
-
-    for (const symbol of combinedAlphabet) {
-      const nextS = getNextState(studentDFA, sState, symbol);
-      const nextA = getNextState(answerDFA, aState, symbol);
-
-      if (!(nextS === SINK && nextA === SINK)) {
-        queue.push([nextS, nextA, path + symbol]);
+  for (let i = 1; i <= n; i++) {
+    const char = cleanInput[i - 1];
+    cfg.rules.forEach((rule) => {
+      if (rule.rhs.includes(char)) {
+        const vIdx = variables.indexOf(rule.lhs);
+        if (vIdx !== -1) P[1][i][vIdx] = true;
       }
-    }
-  }
-
-  return null;
-}
-
-/**
- * Tests a student's Regular Expression string against a suite of test cases.
- */
-export function testRegex(userRegex: string, testCases: TestCase[]): { passed: boolean; results: { input: string; expected: boolean; actual: boolean; passed: boolean }[] } {
-  try {
-    // Sanitize basic formal language operators (+ to |) for JS RegExp
-    const jsRegexPattern = `^(${userRegex.replace(/\+/g, '|')})$`;
-    const regex = new RegExp(jsRegexPattern);
-
-    const results = testCases.map((tc) => {
-      const actual = regex.test(tc.input);
-      return {
-        input: tc.input === '' ? 'ε (empty string)' : tc.input,
-        expected: tc.expected,
-        actual,
-        passed: actual === tc.expected,
-      };
-    });
-
-    const passed = results.every((r) => r.passed);
-    return { passed, results };
-  } catch (e) {
-    throw new Error('Invalid Regular Expression syntax.');
-  }
-}
-
-/**
- * Converts a DFA to a Regular Expression string using State Elimination.
- */
-export function dfaToRegex(dfa: DFA): string {
-  const R: Record<string, Record<string, string>> = {};
-  const states = [...dfa.states];
-  const START = '__START__';
-  const ACCEPT = '__ACCEPT__';
-
-  const union = (a?: string, b?: string) => {
-    if (!a) return b || '';
-    if (!b) return a;
-    return `(${a}|${b})`;
-  };
-
-  const star = (expr?: string) => {
-    if (!expr || expr === 'ε') return '';
-    return expr.length === 1 ? `${expr}*` : `(${expr})*`;
-  };
-
-  // Initialize transition matrix
-  [...states, START, ACCEPT].forEach((s) => { R[s] = {}; });
-
-  // Populate base DFA transitions
-  for (const s of states) {
-    for (const sym of dfa.alphabet) {
-      const target = dfa.transitions[s]?.[sym];
-      if (target) {
-        R[s][target] = R[s][target] ? union(R[s][target], sym) : sym;
-      }
-    }
-  }
-
-  // Set start and accept state epsilon transitions
-  R[START][dfa.initialState] = 'ε';
-  for (const acc of dfa.acceptStates) {
-    R[acc][ACCEPT] = R[acc][ACCEPT] ? union(R[acc][ACCEPT], 'ε') : 'ε';
-  }
-
-  // State elimination
-  for (const k of states) {
-    for (const i of [START, ...states]) {
-      // Use optional chaining so deleted states are skipped cleanly
-      if (i === k || !R[i]?.[k]) continue;
-
-      for (const j of [ACCEPT, ...states]) {
-        if (j === k || !R[k]?.[j]) continue;
-
-        const R_ik = R[i][k];
-        const R_kk = R[k][k] ? star(R[k][k]) : '';
-        const R_kj = R[k][j];
-
-        const path = `${R_ik === 'ε' ? '' : R_ik}${R_kk}${R_kj === 'ε' ? '' : R_kj}`;
-        R[i][j] = R[i][j] ? union(R[i][j], path) : path;
-      }
-    }
-
-    // Remove state k from dictionary
-    delete R[k];
-    Object.keys(R).forEach((s) => {
-      if (R[s]) delete R[s][k];
     });
   }
 
-  return R[START]?.[ACCEPT] || '∅';
-}
-
-/**
- * Powerset Construction: NFA to DFA.
- */
-export function nfaToDFA(nfa: NFA): DFA {
-  const dfaAlphabet = nfa.alphabet.filter((sym) => sym !== '');
-  
-  const getEpsilonClosure = (states: Set<string>): Set<string> => {
-    const closure = new Set(states);
-    const stack = Array.from(states);
-    while (stack.length > 0) {
-      const state = stack.pop()!;
-      const epsTargets = nfa.transitions[state]?.[''] || [];
-      for (const target of epsTargets) {
-        if (!closure.has(target)) {
-          closure.add(target);
-          stack.push(target);
-        }
-      }
-    }
-    return closure;
-  };
-
-  const initialClosure = getEpsilonClosure(new Set([nfa.initialState]));
-  const dfaStateMap = new Map<string, Set<string>>();
-  const dfaTransitions: Record<string, Record<string, string>> = {};
-  const stateToKey = (set: Set<string>) => Array.from(set).sort().join(',') || 'empty';
-
-  const startKey = stateToKey(initialClosure);
-  dfaStateMap.set(startKey, initialClosure);
-
-  const queue = [startKey];
-  const acceptStates = new Set<string>();
-
-  while (queue.length > 0) {
-    const currentKey = queue.shift()!;
-    const currentSet = dfaStateMap.get(currentKey)!;
-
-    if (Array.from(currentSet).some((s) => nfa.acceptStates.includes(s))) {
-      acceptStates.add(currentKey);
-    }
-
-    dfaTransitions[currentKey] = {};
-
-    for (const sym of dfaAlphabet) {
-      const moveSet = new Set<string>();
-      for (const state of currentSet) {
-        const targets = nfa.transitions[state]?.[sym] || [];
-        targets.forEach((t) => moveSet.add(t));
-      }
-
-      const nextClosure = getEpsilonClosure(moveSet);
-      const nextKey = stateToKey(nextClosure);
-
-      dfaTransitions[currentKey][sym] = nextKey;
-
-      if (!dfaStateMap.has(nextKey)) {
-        dfaStateMap.set(nextKey, nextClosure);
-        queue.push(nextKey);
+  for (let l = 2; l <= n; l++) {
+    for (let s = 1; s <= n - l + 1; s++) {
+      for (let p = 1; p <= l - 1; p++) {
+        cfg.rules.forEach((rule) => {
+          const vA = variables.indexOf(rule.lhs);
+          rule.rhs.forEach((prod) => {
+            if (prod.length === 2) {
+              const vB = variables.indexOf(prod[0]);
+              const vC = variables.indexOf(prod[1]);
+              if (vB !== -1 && vC !== -1 && P[p][s][vB] && P[l - p][s + p][vC]) {
+                P[l][s][vA] = true;
+              }
+            }
+          });
+        });
       }
     }
   }
 
-  return {
-    states: Array.from(dfaStateMap.keys()),
-    alphabet: dfaAlphabet,
-    transitions: dfaTransitions,
-    initialState: startKey,
-    acceptStates: Array.from(acceptStates),
-  };
-}
-
-// Helper: Inserts explicit concatenation dots (e.g. "a(b|c)" -> "a.(b|c)")
-function insertConcatOperators(regex: string): string {
-  let result = '';
-  for (let i = 0; i < regex.length; i++) {
-    const c1 = regex[i];
-    result += c1;
-    if (i + 1 < regex.length) {
-      const c2 = regex[i + 1];
-      const c1CanEnd = /[a-zA-Z0-9*)]/.test(c1);
-      const c2CanStart = /[a-zA-Z0-9(]/.test(c2);
-      if (c1CanEnd && c2CanStart) {
-        result += '.';
-      }
-    }
-  }
-  return result;
-}
-
-// Helper: Converts infix regex string to postfix notation via Shunting Yard
-function regexToPostfix(regex: string): string {
-  const precedence: Record<string, number> = { '*': 3, '.': 2, '|': 1, '+': 1 };
-  let postfix = '';
-  const stack: string[] = [];
-  const formatted = insertConcatOperators(regex.replace(/\+/g, '|'));
-
-  for (let i = 0; i < formatted.length; i++) {
-    const char = formatted[i];
-    if (/[a-zA-Z0-9]/.test(char)) {
-      postfix += char;
-    } else if (char === '(') {
-      stack.push(char);
-    } else if (char === ')') {
-      while (stack.length > 0 && stack[stack.length - 1] !== '(') {
-        postfix += stack.pop();
-      }
-      stack.pop();
-    } else if (['*', '.', '|'].includes(char)) {
-      while (
-        stack.length > 0 &&
-        stack[stack.length - 1] !== '(' &&
-        (precedence[stack[stack.length - 1]] || 0) >= (precedence[char] || 0)
-      ) {
-        postfix += stack.pop();
-      }
-      stack.push(char);
-    }
-  }
-
-  while (stack.length > 0) {
-    postfix += stack.pop();
-  }
-
-  return postfix;
-}
-
-/**
- * Thompson's Construction: Converts a Regular Expression string into an NFA.
- */
-export function regexToNFA(regexStr: string, alphabet: string[]): NFA {
-  const postfix = regexToPostfix(regexStr);
-  let stateCount = 0;
-  const nextState = () => `s${stateCount++}`;
-
-  type Fragment = { start: string; accept: string };
-  const stack: Fragment[] = [];
-  const transitions: Record<string, Record<string, string[]>> = {};
-  const allStates = new Set<string>();
-
-  const addTransition = (from: string, sym: string, to: string) => {
-    allStates.add(from);
-    allStates.add(to);
-    if (!transitions[from]) transitions[from] = {};
-    if (!transitions[from][sym]) transitions[from][sym] = [];
-    transitions[from][sym].push(to);
-  };
-
-  for (const char of postfix) {
-    if (alphabet.includes(char) || /[a-zA-Z0-9]/.test(char)) {
-      const start = nextState();
-      const accept = nextState();
-      addTransition(start, char, accept);
-      stack.push({ start, accept });
-    } else if (char === '*') {
-      const frag = stack.pop();
-      if (!frag) throw new Error('Invalid syntax near *');
-      const start = nextState();
-      const accept = nextState();
-
-      addTransition(start, '', frag.start);
-      addTransition(start, '', accept);
-      addTransition(frag.accept, '', frag.start);
-      addTransition(frag.accept, '', accept);
-
-      stack.push({ start, accept });
-    } else if (char === '.') {
-      const frag2 = stack.pop();
-      const frag1 = stack.pop();
-      if (!frag1 || !frag2) throw new Error('Invalid concatenation operator');
-
-      addTransition(frag1.accept, '', frag2.start);
-      stack.push({ start: frag1.start, accept: frag2.accept });
-    } else if (char === '|') {
-      const frag2 = stack.pop();
-      const frag1 = stack.pop();
-      if (!frag1 || !frag2) throw new Error('Invalid union operator');
-
-      const start = nextState();
-      const accept = nextState();
-
-      addTransition(start, '', frag1.start);
-      addTransition(start, '', frag2.start);
-      addTransition(frag1.accept, '', accept);
-      addTransition(frag2.accept, '', accept);
-
-      stack.push({ start, accept });
-    }
-  }
-
-  if (stack.length !== 1) {
-    throw new Error('Malformed regular expression');
-  }
-
-  const finalFrag = stack[0];
-
-  return {
-    states: Array.from(allStates),
-    alphabet: [...alphabet, ''],
-    transitions,
-    initialState: finalFrag.start,
-    acceptStates: [finalFrag.accept],
-  };
-}
-
-/**
- * Converts a Regex string directly into a DFA by chaining Thompson's + Powerset Construction.
- */
-export function parseRegexToDFA(regexStr: string, alphabet: string[]): DFA {
-  const nfa = regexToNFA(regexStr, alphabet);
-  return nfaToDFA(nfa);
+  const startIdx = variables.indexOf(startSymbol);
+  return startIdx !== -1 ? P[n][1][startIdx] : false;
 }

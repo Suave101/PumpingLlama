@@ -1,0 +1,15 @@
+{
+  "id": "cfg-cnf-conversion",
+  "type": "cfg-to-cnf",
+  "title": "Convert CFG to Chomsky Normal Form",
+  "description": "Convert the grammar rules for L = { aⁿbⁿ | n ≥ 1 } into Chomsky Normal Form (all rules must be A -> BC or A -> a).",
+  "alphabet": ["a", "b"],
+  "testCases": [
+    { "input": "ab", "expected": true },
+    { "input": "aabb", "expected": true },
+    { "input": "aaabbb", "expected": true },
+    { "input": "a", "expected": false },
+    { "input": "abb", "expected": false },
+    { "input": "b", "expected": false }
+  ]
+}

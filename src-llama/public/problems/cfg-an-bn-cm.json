@@ -1,0 +1,26 @@
+{
+  "id": "cfg-an-bn-cm",
+  "type": "cfg-design",
+  "title": "CFG: Language { aⁿbⁿcᵐ | n, m ≥ 0 }",
+  "description": "Construct a Context-Free Grammar for strings containing $n$ 'a's, $n$ 'b's, and $m$ 'c's in sequence.",
+  "alphabet": ["a", "b", "c"],
+  "answerCFG": {
+    "variables": ["S", "A", "B"],
+    "terminals": ["a", "b", "c"],
+    "startVariable": "S",
+    "productions": {
+      "S": ["AB"],
+      "A": ["aAb", ""],
+      "B": ["cB", ""]
+    }
+  },
+  "testCases": [
+    { "input": "", "expected": true },
+    { "input": "ab", "expected": true },
+    { "input": "c", "expected": true },
+    { "input": "abc", "expected": true },
+    { "input": "aabbccc", "expected": true },
+    { "input": "ba", "expected": false },
+    { "input": "abbc", "expected": false }
+  ]
+}

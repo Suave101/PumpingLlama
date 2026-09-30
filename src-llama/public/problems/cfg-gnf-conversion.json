@@ -1,0 +1,14 @@
+{
+  "id": "cfg-gnf-conversion",
+  "type": "cfg-to-gnf",
+  "title": "Convert CFG to Greibach Normal Form",
+  "description": "Convert the grammar into Greibach Normal Form (GNF), where every production rule begins with a terminal followed optionally by variables (A -> a V₁ V₂ ... Vₖ).",
+  "alphabet": ["a", "b"],
+  "testCases": [
+    { "input": "ab", "expected": true },
+    { "input": "aabb", "expected": true },
+    { "input": "aaabbb", "expected": true },
+    { "input": "a", "expected": false },
+    { "input": "b", "expected": false }
+  ]
+}

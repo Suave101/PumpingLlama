@@ -1,0 +1,27 @@
+{
+  "id": "exactly-two-1s",
+  "type": "dfa-design",
+  "title": "DFA: Exactly Two 1s",
+  "description": "Construct a DFA over alphabet {0, 1} that accepts strings containing exactly two \"1\"s.",
+  "alphabet": ["0", "1"],
+  "answerDFA": {
+    "states": ["q0", "q1", "q2", "qTrap"],
+    "alphabet": ["0", "1"],
+    "initialState": "q0",
+    "acceptStates": ["q2"],
+    "transitions": {
+      "q0": { "0": "q0", "1": "q1" },
+      "q1": { "0": "q1", "1": "q2" },
+      "q2": { "0": "q2", "1": "qTrap" },
+      "qTrap": { "0": "qTrap", "1": "qTrap" }
+    }
+  },
+  "testCases": [
+    { "input": "11", "expected": true },
+    { "input": "01010", "expected": true },
+    { "input": "001100", "expected": true },
+    { "input": "1", "expected": false },
+    { "input": "111", "expected": false },
+    { "input": "", "expected": false }
+  ]
+}

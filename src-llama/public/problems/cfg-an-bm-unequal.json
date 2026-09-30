@@ -1,0 +1,26 @@
+{
+  "id": "cfg-an-bm-unequal",
+  "type": "cfg-design",
+  "title": "CFG: Language { aⁿbᵐ | n ≠ m }",
+  "description": "Construct a Context-Free Grammar for strings of 'a's followed by 'b's where the number of 'a's does not equal the number of 'b's.",
+  "alphabet": ["a", "b"],
+  "answerCFG": {
+    "variables": ["S", "A", "B"],
+    "terminals": ["a", "b"],
+    "startVariable": "S",
+    "productions": {
+      "S": ["A", "B"],
+      "A": ["aA", "aAb", "a"],
+      "B": ["Bb", "aBb", "b"]
+    }
+  },
+  "testCases": [
+    { "input": "a", "expected": true },
+    { "input": "b", "expected": true },
+    { "input": "aab", "expected": true },
+    { "input": "abb", "expected": true },
+    { "input": "", "expected": false },
+    { "input": "ab", "expected": false },
+    { "input": "aabb", "expected": false }
+  ]
+}

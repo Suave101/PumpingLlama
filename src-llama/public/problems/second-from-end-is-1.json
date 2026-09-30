@@ -1,0 +1,29 @@
+{
+  "id": "second-from-end-is-1",
+  "type": "dfa-design",
+  "title": "DFA: Second Symbol from End is \"1\"",
+  "description": "Construct a DFA over alphabet {0, 1} that accepts strings where the second symbol from the end is \"1\".",
+  "alphabet": ["0", "1"],
+  "answerDFA": {
+    "states": ["q00", "q01", "q10", "q11"],
+    "alphabet": ["0", "1"],
+    "initialState": "q00",
+    "acceptStates": ["q10", "q11"],
+    "transitions": {
+      "q00": { "0": "q00", "1": "q01" },
+      "q01": { "0": "q10", "1": "q11" },
+      "q10": { "0": "q00", "1": "q01" },
+      "q11": { "0": "q10", "1": "q11" }
+    }
+  },
+  "testCases": [
+    { "input": "10", "expected": true },
+    { "input": "11", "expected": true },
+    { "input": "010", "expected": true },
+    { "input": "111", "expected": true },
+    { "input": "100", "expected": false },
+    { "input": "0", "expected": false },
+    { "input": "1", "expected": false },
+    { "input": "", "expected": false }
+  ]
+}

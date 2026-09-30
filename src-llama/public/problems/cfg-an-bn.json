@@ -1,0 +1,24 @@
+{
+  "id": "cfg-an-bn",
+  "type": "cfg-design",
+  "title": "CFG: Language { aⁿbⁿ | n ≥ 0 }",
+  "description": "Construct a Context-Free Grammar for the language L = { aⁿbⁿ | n ≥ 0 } over alphabet {a, b}.",
+  "alphabet": ["a", "b"],
+  "answerCFG": {
+    "variables": ["S"],
+    "terminals": ["a", "b"],
+    "startVariable": "S",
+    "productions": {
+      "S": ["aSb", ""]
+    }
+  },
+  "testCases": [
+    { "input": "", "expected": true },
+    { "input": "ab", "expected": true },
+    { "input": "aabb", "expected": true },
+    { "input": "aaabbb", "expected": true },
+    { "input": "a", "expected": false },
+    { "input": "ba", "expected": false },
+    { "input": "aab", "expected": false }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "parse-tree-simple",
+  "type": "parse-trees",
+  "title": "Construct a Valid Parse Tree",
+  "description": "Construct a valid JSON parse tree for the target string 'ab' given the grammar S -> A B, A -> a, B -> b.",
+  "alphabet": ["a", "b"],
+  "testCases": [
+    { "input": "ab", "expected": true }
+  ]
+}

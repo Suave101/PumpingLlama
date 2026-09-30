@@ -1,0 +1,10 @@
+{
+  "id": "ambiguity-expression-grammar",
+  "type": "ambiguity-detection",
+  "title": "Prove Ambiguity of Arithmetic Expression Grammar",
+  "description": "Provide two distinct leftmost derivations for the string w = 'a+a*a' to prove that the arithmetic expression grammar E -> E + E | E * E | a is ambiguous.",
+  "alphabet": ["a", "+", "*"],
+  "testCases": [
+    { "input": "a+a*a", "expected": true }
+  ]
+}

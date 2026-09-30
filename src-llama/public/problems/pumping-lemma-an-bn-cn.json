@@ -1,0 +1,16 @@
+{
+  "id": "pumping-lemma-an-bn-cn",
+  "type": "pumping-lemma",
+  "title": "Pumping Lemma: L = { aⁿbⁿcⁿ | n ≥ 0 }",
+  "description": "Prove that L = { aⁿbⁿcⁿ | n ≥ 0 } is not context-free by choosing a pumping length p, string w, decomposition u v x y z, and exponent i to produce a string outside L.",
+  "alphabet": ["a", "b", "c"],
+  "testCases": [
+    { "input": "abc", "expected": true },
+    { "input": "aabbcc", "expected": true },
+    { "input": "aaabbbccc", "expected": true },
+    { "input": "aabbc", "expected": false },
+    { "input": "aabcc", "expected": false },
+    { "input": "abbcc", "expected": false },
+    { "input": "aaaaabbbbccccc", "expected": false }
+  ]
+}

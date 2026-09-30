@@ -1,0 +1,24 @@
+{
+  "id": "cfg-balanced-parentheses",
+  "type": "cfg-design",
+  "title": "CFG: Balanced Parentheses",
+  "description": "Construct a Context-Free Grammar for well-formed nested parentheses over the alphabet {(, )}.",
+  "alphabet": ["(", ")"],
+  "answerCFG": {
+    "variables": ["S"],
+    "terminals": ["(", ")"],
+    "startVariable": "S",
+    "productions": {
+      "S": ["(S)S", ""]
+    }
+  },
+  "testCases": [
+    { "input": "", "expected": true },
+    { "input": "()", "expected": true },
+    { "input": "(())", "expected": true },
+    { "input": "()()", "expected": true },
+    { "input": "(()())", "expected": true },
+    { "input": ")(", "expected": false },
+    { "input": "(()", "expected": false }
+  ]
+}

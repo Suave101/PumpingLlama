@@ -1,321 +1,383 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { DFA, Problem } from '@/types/automata';
-import { runDFA, findCounterexample, parseRegexToDFA, dfaToRegex } from '@/lib/logic';
+import {
+  Problem,
+  ProblemType,
+  PDA,
+  CFG,
+  PumpingLemmaSubmission,
+  AmbiguityProof,
+  VerificationResult,
+} from '@/types/automata';
+import { evaluateSolution } from '@/lib/logic';
 
-type CanvasNode = {
-  id: string;
-  x: number;
-  y: number;
-  isInitial: boolean;
-  isAccepting: boolean;
-};
+type EditorMode = 'canvas' | 'regex' | 'cfg' | 'pda' | 'pumping' | 'ambiguity' | 'parse-tree' | 'json';
 
-type CanvasEdge = {
-  id: string;
-  from: string;
-  to: string;
-  symbols: string;
-};
+function getProblemModeConfig(type: ProblemType): { defaultMode: EditorMode; allowedModes: EditorMode[] } {
+  switch (type) {
+    case 'pda-construction':
+    case 'cfg-to-pda':
+      return { defaultMode: 'pda', allowedModes: ['pda', 'json'] };
 
-type TestResult = {
-  input: string;
-  expected: boolean;
-  actual: boolean;
-  passed: boolean;
-};
+    case 'cfg-to-gnf':
+    case 'cfg-to-cnf':
+    case 'cfg-construction':
+      return { defaultMode: 'cfg', allowedModes: ['cfg', 'json'] };
+
+    case 'pumping-lemma':
+      return { defaultMode: 'pumping', allowedModes: ['pumping'] };
+
+    case 'ambiguity-detection':
+      return { defaultMode: 'ambiguity', allowedModes: ['ambiguity', 'cfg'] };
+
+    case 'parse-trees':
+      return { defaultMode: 'parse-tree', allowedModes: ['parse-tree', 'cfg'] };
+
+    case 'dfa-to-regex':
+    case 'regex-construction':
+      return { defaultMode: 'regex', allowedModes: ['regex'] };
+
+    default:
+      return { defaultMode: 'canvas', allowedModes: ['canvas', 'json'] };
+  }
+}
 
 export default function ProblemWorkspace({ problem }: { problem: Problem }) {
-  const [editorMode, setEditorMode] = useState<'canvas' | 'json'>('canvas');
+  const modeConfig = useMemo(() => getProblemModeConfig(problem.type), [problem.type]);
+  const [editorMode, setEditorMode] = useState<EditorMode>(modeConfig.defaultMode);
 
-  // Default Canvas Layout
-  const [nodes, setNodes] = useState<CanvasNode[]>([
-    { id: 'q0', x: 100, y: 150, isInitial: true, isAccepting: false },
-    { id: 'q1', x: 260, y: 150, isInitial: false, isAccepting: false },
-    { id: 'q2', x: 420, y: 150, isInitial: false, isAccepting: true },
-  ]);
-  const [edges, setEdges] = useState<CanvasEdge[]>([]);
+  useEffect(() => {
+    setEditorMode(modeConfig.defaultMode);
+  }, [problem.id, modeConfig]);
 
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [edgeSourceId, setEdgeSourceId] = useState<string | null>(null);
-  const [tool, setTool] = useState<'select' | 'addNode' | 'addEdge'>('select');
-  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+  // Editor States
+  const [cfgText, setCfgText] = useState<string>('S -> A B | a\nA -> a\nB -> b');
+  const [pdaJson, setPdaJson] = useState<string>(
+    JSON.stringify(
+      {
+        states: ['q0', 'q1', 'q2'],
+        alphabet: ['a', 'b'],
+        stackAlphabet: ['Z0', 'A'],
+        initialState: 'q0',
+        initialStackSymbol: 'Z0',
+        acceptStates: ['q2'],
+        acceptBy: 'final-state',
+        transitions: [
+          { from: 'q0', to: 'q0', inputSymbol: 'a', popSymbol: 'Z0', pushSymbols: ['A', 'Z0'] },
+          { from: 'q0', to: 'q1', inputSymbol: 'b', popSymbol: 'A', pushSymbols: [] },
+          { from: 'q1', to: 'q2', inputSymbol: '', popSymbol: 'Z0', pushSymbols: ['Z0'] },
+        ],
+      },
+      null,
+      2
+    )
+  );
 
-  const [dfaJson, setDfaJson] = useState<string>(JSON.stringify(problem.answerDFA, null, 2));
-  const [regexInput, setRegexInput] = useState<string>('');
+  const [pumpingState, setPumpingState] = useState<PumpingLemmaSubmission>({
+    p: 4,
+    w: 'aaaabbbb',
+    u: 'aa',
+    v: 'aa',
+    x: '',
+    y: 'bb',
+    z: 'bb',
+    i: 0,
+  });
 
-  const [testResults, setTestResults] = useState<TestResult[]>([]);
-  const [counterexample, setCounterexample] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [ambiguityState, setAmbiguityState] = useState<AmbiguityProof>({
+    stringW: 'a+a*a',
+    leftDerivation1: ['E', 'E+E', 'a+E', 'a+E*E', 'a+a*E', 'a+a*a'],
+    leftDerivation2: ['E', 'E*E', 'E+E*E', 'a+E*E', 'a+a*E', 'a+a*a'],
+  });
 
-  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [parseTreeInput, setParseTreeInput] = useState<string>(
+    JSON.stringify({ symbol: 'S', children: [{ symbol: 'a' }, { symbol: 'b' }] }, null, 2)
+  );
 
-  const graphToDFA = (): DFA => {
-    const states = nodes.map((n) => n.id);
-    const initialNode = nodes.find((n) => n.isInitial) || nodes[0];
-    const acceptStates = nodes.filter((n) => n.isAccepting).map((n) => n.id);
-    const transitions: Record<string, Record<string, string>> = {};
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
 
-    states.forEach((s) => { transitions[s] = {}; });
-    edges.forEach((e) => {
-      const symList = e.symbols.split(/[\s,]+/).filter(Boolean);
-      symList.forEach((sym) => {
-        if (transitions[e.from]) transitions[e.from][sym] = e.to;
-      });
+  const parseCFGInput = (): CFG => {
+    const lines = cfgText.split('\n').filter((l) => l.trim().length > 0);
+    const rules = lines.map((line) => {
+      const parts = line.split(/->|::=/).map((s) => s.trim());
+      const lhs = parts[0] || 'S';
+      const rhsPart = parts[1] || '';
+      const rhs = rhsPart.split('|').map((s) => s.trim());
+      return { lhs, rhs };
     });
 
     return {
-      states,
-      alphabet: problem.alphabet,
-      initialState: initialNode ? initialNode.id : '',
-      acceptStates,
-      transitions,
+      variables: Array.from(new Set(rules.map((r) => r.lhs))),
+      terminals: problem.alphabet || ['a', 'b'],
+      rules,
+      startSymbol: rules[0]?.lhs || 'S',
     };
   };
 
-  const handleCanvasClick = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (tool === 'addNode' && svgRef.current) {
-      const rect = svgRef.current.getBoundingClientRect();
-      const newId = `q${nodes.length}`;
-      setNodes([
-        ...nodes,
-        {
-          id: newId,
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top,
-          isInitial: nodes.length === 0,
-          isAccepting: false,
-        },
-      ]);
-      setTool('select');
-    }
-  };
+  const handleVerify = () => {
+    let payload: Parameters<typeof evaluateSolution>[0] = {};
 
-  const handleNodeClick = (nodeId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (tool === 'addEdge') {
-      if (!edgeSourceId) {
-        setEdgeSourceId(nodeId);
-      } else {
-        const symbol = prompt('Enter transition symbol(s):', '0');
-        if (symbol) {
-          setEdges([...edges, { id: `e_${Date.now()}`, from: edgeSourceId, to: nodeId, symbols: symbol }]);
-        }
-        setEdgeSourceId(null);
-        setTool('select');
+    if (editorMode === 'pda') {
+      try {
+        payload.pda = JSON.parse(pdaJson) as PDA;
+      } catch {
+        alert('Invalid PDA JSON structure.');
+        return;
       }
-    } else {
-      setSelectedNodeId(nodeId);
-    }
-  };
-
-  const handleRun = () => {
-    setErrorMessage(null);
-    setCounterexample(null);
-
-    let studentDFA: DFA;
-    try {
-      if (problem.type === 'dfa-to-regex') {
-        if (!regexInput.trim()) {
-          setErrorMessage('Please enter a regular expression.');
-          return;
-        }
-        studentDFA = parseRegexToDFA(regexInput, problem.alphabet);
-      } else if (editorMode === 'canvas') {
-        studentDFA = graphToDFA();
-      } else {
-        studentDFA = JSON.parse(dfaJson);
+    } else if (editorMode === 'cfg') {
+      payload.cfg = parseCFGInput();
+    } else if (editorMode === 'pumping') {
+      payload.pumping = pumpingState;
+    } else if (editorMode === 'ambiguity') {
+      payload.ambiguity = ambiguityState;
+      payload.cfg = parseCFGInput();
+    } else if (editorMode === 'parse-tree') {
+      try {
+        payload.parseTree = {
+          tree: JSON.parse(parseTreeInput),
+          target: problem.testCases[0]?.input || 'ab',
+        };
+        payload.cfg = parseCFGInput();
+      } catch {
+        alert('Invalid Parse Tree JSON.');
+        return;
       }
-    } catch (e: any) {
-      setErrorMessage(e.message || 'Error processing input.');
-      return;
     }
 
-    const results: TestResult[] = problem.testCases.map((tc) => {
-      const actual = runDFA(studentDFA, tc.input);
-      return {
-        input: tc.input === '' ? 'ε (empty string)' : tc.input,
-        expected: tc.expected,
-        actual,
-        passed: actual === tc.expected,
-      };
-    });
-    setTestResults(results);
+    const dummyDFA = problem.answerDFA || {
+      states: [],
+      alphabet: problem.alphabet || ['a', 'b'],
+      transitions: {},
+      initialState: '',
+      acceptStates: [],
+    };
 
-    const mismatch = findCounterexample(studentDFA, problem.answerDFA);
-    setCounterexample(mismatch);
+    const result = evaluateSolution(payload, dummyDFA, problem.testCases, problem.type);
+    setVerificationResult(result);
   };
 
   return (
-    <main className="min-h-screen bg-slate-900 text-slate-100 p-8 font-sans">
-      <div className="max-w-6xl mx-auto flex flex-col gap-6">
-        <Link href="/" className="text-xs font-semibold text-emerald-400 hover:text-emerald-300">
-          &larr; Back to Problem Selector
-        </Link>
-
-        <header>
-          <span className="text-xs uppercase tracking-widest text-emerald-400 font-semibold">
-            Category: {problem.type}
-          </span>
-          <h1 className="text-3xl font-bold text-white mt-1">{problem.title}</h1>
-          <p className="text-slate-400 mt-2">{problem.description}</p>
+    <main className="min-h-screen bg-slate-950 text-slate-100 p-8 font-sans">
+      <div className="max-w-7xl mx-auto flex flex-col gap-6">
+        <header className="flex justify-between items-start border-b border-slate-800 pb-4">
+          <div>
+            <Link href="/" className="text-xs font-semibold text-emerald-400 hover:text-emerald-300">
+              &larr; Back to Problem Overview
+            </Link>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-xs uppercase tracking-wider font-semibold px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-emerald-400 font-mono">
+                {problem.type}
+              </span>
+              <h1 className="text-2xl font-bold text-white">{problem.title}</h1>
+            </div>
+            <p className="text-slate-400 text-sm mt-1">{problem.description}</p>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-7 flex flex-col gap-6">
-            {problem.type !== 'dfa-to-regex' && (
-              <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-800">
+            {/* Mode Switcher */}
+            {modeConfig.allowedModes.length > 1 && (
+              <div className="flex justify-between items-center bg-slate-900 p-2 rounded-lg border border-slate-800">
                 <span className="text-xs text-slate-400 pl-2">Editor Mode:</span>
                 <div className="flex gap-1">
-                  <button
-                    onClick={() => setEditorMode('canvas')}
-                    className={`px-3 py-1 rounded text-xs font-medium ${
-                      editorMode === 'canvas' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Visual Canvas
-                  </button>
-                  <button
-                    onClick={() => setEditorMode('json')}
-                    className={`px-3 py-1 rounded text-xs font-medium ${
-                      editorMode === 'json' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    JSON Matrix
-                  </button>
+                  {modeConfig.allowedModes.map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setEditorMode(mode)}
+                      className={`px-3 py-1 rounded text-xs font-medium uppercase ${
+                        editorMode === mode ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
 
-            {problem.type !== 'dfa-to-regex' && editorMode === 'canvas' && (
-              <div className="flex flex-col gap-3">
-                <div className="flex gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 text-xs">
-                  <button
-                    onClick={() => setTool('select')}
-                    className={`px-3 py-1.5 rounded font-medium ${
-                      tool === 'select' ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30' : 'text-slate-400'
-                    }`}
-                  >
-                    Move / Select
-                  </button>
-                  <button
-                    onClick={() => setTool('addNode')}
-                    className={`px-3 py-1.5 rounded font-medium ${
-                      tool === 'addNode' ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30' : 'text-slate-400'
-                    }`}
-                  >
-                    + Add State
-                  </button>
-                  <button
-                    onClick={() => { setTool('addEdge'); setEdgeSourceId(null); }}
-                    className={`px-3 py-1.5 rounded font-medium ${
-                      tool === 'addEdge' ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30' : 'text-slate-400'
-                    }`}
-                  >
-                    + Add Transition {edgeSourceId ? '(Select Target)' : ''}
-                  </button>
+            {/* PDA Editor */}
+            {editorMode === 'pda' && (
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-slate-300">
+                  Pushdown Automaton Definition (JSON format):
+                </label>
+                <textarea
+                  value={pdaJson}
+                  onChange={(e) => setPdaJson(e.target.value)}
+                  rows={14}
+                  className="w-full bg-slate-900 font-mono text-xs p-4 rounded-lg border border-slate-800 text-emerald-300 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            )}
+
+            {/* CFG Editor */}
+            {editorMode === 'cfg' && (
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-slate-300">
+                  Grammar Production Rules (e.g. S -&gt; A B | a):
+                </label>
+                <textarea
+                  value={cfgText}
+                  onChange={(e) => setCfgText(e.target.value)}
+                  rows={10}
+                  className="w-full bg-slate-900 font-mono text-sm p-4 rounded-lg border border-slate-800 text-emerald-300 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            )}
+
+            {/* Pumping Lemma Form */}
+            {editorMode === 'pumping' && (
+              <div className="flex flex-col gap-4 bg-slate-900 p-5 rounded-xl border border-slate-800">
+                <h3 className="text-sm font-bold text-emerald-400">Pumping Lemma Adversarial Proof (w = u v x y z)</h3>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <label className="text-slate-400 block mb-1">Pumping Length (p):</label>
+                    <input
+                      type="number"
+                      value={pumpingState.p}
+                      onChange={(e) => setPumpingState({ ...pumpingState, p: parseInt(e.target.value) || 0 })}
+                      className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 block mb-1">Target String w (|w| ≥ p):</label>
+                    <input
+                      type="text"
+                      value={pumpingState.w}
+                      onChange={(e) => setPumpingState({ ...pumpingState, w: e.target.value })}
+                      className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-white font-mono"
+                    />
+                  </div>
                 </div>
 
-                <div className="relative border border-slate-800 bg-slate-950 rounded-xl overflow-hidden h-[340px]">
-                  <svg
-                    ref={svgRef}
-                    className="w-full h-full cursor-crosshair"
-                    onClick={handleCanvasClick}
-                    onMouseMove={(e) => {
-                      if (draggingNodeId && svgRef.current) {
-                        const rect = svgRef.current.getBoundingClientRect();
-                        setNodes(nodes.map((n) => (n.id === draggingNodeId ? { ...n, x: e.clientX - rect.left, y: e.clientY - rect.top } : n)));
-                      }
-                    }}
-                    onMouseUp={() => setDraggingNodeId(null)}
-                  >
-                    <defs>
-                      <marker id="arrow" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
-                      </marker>
-                    </defs>
+                <div className="grid grid-cols-5 gap-2 text-xs">
+                  {['u', 'v', 'x', 'y', 'z'].map((part) => (
+                    <div key={part}>
+                      <label className="text-slate-400 block mb-1 uppercase font-bold">{part}:</label>
+                      <input
+                        type="text"
+                        value={(pumpingState as any)[part]}
+                        onChange={(e) => setPumpingState({ ...pumpingState, [part]: e.target.value })}
+                        className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-emerald-300 font-mono"
+                      />
+                    </div>
+                  ))}
+                </div>
 
-                    {edges.map((e) => {
-                      const fromNode = nodes.find((n) => n.id === e.from);
-                      const toNode = nodes.find((n) => n.id === e.to);
-                      if (!fromNode || !toNode) return null;
-                      return (
-                        <g key={e.id}>
-                          <line x1={fromNode.x} y1={fromNode.y} x2={toNode.x} y2={toNode.y} stroke="#10b981" strokeWidth="2" markerEnd="url(#arrow)" />
-                          <text x={(fromNode.x + toNode.x) / 2} y={(fromNode.y + toNode.y) / 2 - 8} fill="#a7f3d0" fontSize="12" textAnchor="middle">
-                            {e.symbols}
-                          </text>
-                        </g>
-                      );
-                    })}
-
-                    {nodes.map((n) => (
-                      <g key={n.id} onClick={(e) => handleNodeClick(n.id, e)} onMouseDown={() => tool === 'select' && setDraggingNodeId(n.id)}>
-                        <circle cx={n.x} cy={n.y} r={24} className={`${selectedNodeId === n.id ? 'stroke-amber-400 stroke-[3]' : 'stroke-emerald-500 stroke-2'} fill-slate-900`} />
-                        {n.isAccepting && <circle cx={n.x} cy={n.y} r={18} className="stroke-emerald-500 stroke-2 fill-none" />}
-                        <text x={n.x} y={n.y + 4} fill="#ffffff" fontSize="13" textAnchor="middle" className="font-mono font-bold select-none">{n.id}</text>
-                      </g>
-                    ))}
-                  </svg>
+                <div>
+                  <label className="text-slate-400 text-xs block mb-1">Pumping Exponent (i):</label>
+                  <input
+                    type="number"
+                    value={pumpingState.i}
+                    onChange={(e) => setPumpingState({ ...pumpingState, i: parseInt(e.target.value) || 0 })}
+                    className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-white font-mono text-xs"
+                  />
                 </div>
               </div>
             )}
 
-            {problem.type !== 'dfa-to-regex' && editorMode === 'json' && (
-              <textarea
-                value={dfaJson}
-                onChange={(e) => setDfaJson(e.target.value)}
-                rows={10}
-                className="w-full bg-slate-950 font-mono text-sm p-4 rounded-lg border border-slate-800 text-emerald-300 focus:outline-none"
-              />
+            {/* Ambiguity Proof Form */}
+            {editorMode === 'ambiguity' && (
+              <div className="flex flex-col gap-4 bg-slate-900 p-5 rounded-xl border border-slate-800 text-xs">
+                <h3 className="text-sm font-bold text-emerald-400">Ambiguity Proof (Two Leftmost Derivations)</h3>
+                <div>
+                  <label className="text-slate-400 block mb-1">Target String w:</label>
+                  <input
+                    type="text"
+                    value={ambiguityState.stringW}
+                    onChange={(e) => setAmbiguityState({ ...ambiguityState, stringW: e.target.value })}
+                    className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">Leftmost Derivation #1 (comma-separated steps):</label>
+                  <input
+                    type="text"
+                    value={ambiguityState.leftDerivation1.join(', ')}
+                    onChange={(e) => setAmbiguityState({ ...ambiguityState, leftDerivation1: e.target.value.split(',').map((s) => s.trim()) })}
+                    className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-emerald-300 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">Leftmost Derivation #2 (comma-separated steps):</label>
+                  <input
+                    type="text"
+                    value={ambiguityState.leftDerivation2.join(', ')}
+                    onChange={(e) => setAmbiguityState({ ...ambiguityState, leftDerivation2: e.target.value.split(',').map((s) => s.trim()) })}
+                    className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-emerald-300 font-mono"
+                  />
+                </div>
+              </div>
             )}
 
-            {problem.type === 'dfa-to-regex' && (
-              <input
-                type="text"
-                value={regexInput}
-                onChange={(e) => setRegexInput(e.target.value)}
-                placeholder="e.g. (1*0)* or (0|1)*01"
-                className="w-full bg-slate-950 font-mono text-sm p-3 rounded-lg border border-slate-800 text-emerald-300 focus:outline-none"
-              />
+            {/* Parse Tree Editor */}
+            {editorMode === 'parse-tree' && (
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-slate-300">
+                  Parse Tree Hierarchy (JSON structure):
+                </label>
+                <textarea
+                  value={parseTreeInput}
+                  onChange={(e) => setParseTreeInput(e.target.value)}
+                  rows={10}
+                  className="w-full bg-slate-900 font-mono text-xs p-4 rounded-lg border border-slate-800 text-emerald-300 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
             )}
 
-            {errorMessage && (
-              <div className="bg-red-950/50 border border-red-500/50 text-red-300 p-3 rounded-md text-sm">{errorMessage}</div>
-            )}
-
-            <button onClick={handleRun} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-lg transition shadow-lg">
-              Run Tests & Verify
+            <button
+              onClick={handleVerify}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-lg transition shadow-lg"
+            >
+              Verify Solution & Run Evaluator
             </button>
           </div>
 
+          {/* Results Feedback Panel */}
           <div className="lg:col-span-5 flex flex-col gap-6">
-            <div className="bg-slate-950 border border-slate-800 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Verification Results</h2>
-              {testResults.length === 0 ? (
-                <p className="text-slate-500 text-sm italic">Run tests to evaluate state machine correctness.</p>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-white mb-3">Verification & Score</h2>
+              {!verificationResult ? (
+                <p className="text-slate-500 text-sm italic">Execute solution to view automated grading diagnostics.</p>
               ) : (
                 <div className="space-y-4">
-                  {counterexample === null ? (
-                    <div className="bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 p-4 rounded-lg text-sm">
-                      <strong>Status: 100% Equivalent</strong>
+                  <div
+                    className={`p-4 rounded-lg text-sm border ${
+                      verificationResult.passed
+                        ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300'
+                        : 'bg-amber-950/60 border-amber-500/50 text-amber-300'
+                    }`}
+                  >
+                    <div className="font-bold flex justify-between items-center">
+                      <span>{verificationResult.passed ? '✓ Solution Verified' : '✗ Verification Failed'}</span>
+                      <span className="text-xs bg-slate-950 px-2 py-0.5 rounded border border-slate-800 font-mono">
+                        Score: {(verificationResult.score * 100).toFixed(0)}%
+                      </span>
                     </div>
-                  ) : (
-                    <div className="bg-amber-950/60 border border-amber-500/50 text-amber-300 p-4 rounded-lg text-sm">
-                      <strong>Equivalence Check Failed</strong>
-                      <p className="text-xs mt-1">Failed counterexample string: <code>{counterexample}</code></p>
+                    <p className="text-xs mt-2 leading-relaxed">{verificationResult.feedback}</p>
+                  </div>
+
+                  {verificationResult.testResults.length > 0 && (
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                      <span className="text-xs text-slate-400">Test Case Diagnostics:</span>
+                      {verificationResult.testResults.map((res, idx) => (
+                        <div
+                          key={idx}
+                          className={`px-3 py-2 rounded border text-xs flex justify-between items-center ${
+                            res.passed
+                              ? 'bg-emerald-950/30 border-emerald-900/50 text-emerald-300'
+                              : 'bg-red-950/30 border-red-900/50 text-red-300'
+                          }`}
+                        >
+                          <span className="font-mono">"{res.input}"</span>
+                          <span>{res.passed ? '✓ Passed' : '✗ Failed'}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
-
-                  <div className="flex flex-wrap gap-2">
-                    {testResults.map((res, idx) => (
-                      <div key={idx} className={`px-3 py-2 rounded border text-xs ${res.passed ? 'bg-emerald-950/30 border-emerald-800/50 text-emerald-300' : 'bg-red-950/30 border-red-800/50 text-red-300'}`}>
-                        <span className="font-mono font-semibold">{res.input}</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>

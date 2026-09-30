@@ -1,0 +1,27 @@
+{
+  "id": "no-111",
+  "type": "dfa-design",
+  "title": "DFA: Does Not Contain \"111\"",
+  "description": "Construct a DFA over alphabet {0, 1} that accepts strings that do NOT contain the substring \"111\".",
+  "alphabet": ["0", "1"],
+  "answerDFA": {
+    "states": ["q0", "q1", "q2", "qTrap"],
+    "alphabet": ["0", "1"],
+    "initialState": "q0",
+    "acceptStates": ["q0", "q1", "q2"],
+    "transitions": {
+      "q0": { "0": "q0", "1": "q1" },
+      "q1": { "0": "q0", "1": "q2" },
+      "q2": { "0": "q0", "1": "qTrap" },
+      "qTrap": { "0": "qTrap", "1": "qTrap" }
+    }
+  },
+  "testCases": [
+    { "input": "", "expected": true },
+    { "input": "0110", "expected": true },
+    { "input": "11011", "expected": true },
+    { "input": "111", "expected": false },
+    { "input": "01110", "expected": false },
+    { "input": "1111", "expected": false }
+  ]
+}

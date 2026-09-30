@@ -1,0 +1,15 @@
+{
+  "id": "cfg-to-pda-palindrome",
+  "type": "cfg-to-pda",
+  "title": "Convert CFG to PDA (Even Palindromes)",
+  "description": "Construct an equivalent Pushdown Automaton for the Context-Free Grammar generating even length palindromes over {0, 1}.",
+  "alphabet": ["0", "1"],
+  "testCases": [
+    { "input": "00", "expected": true },
+    { "input": "11", "expected": true },
+    { "input": "0110", "expected": true },
+    { "input": "1001", "expected": true },
+    { "input": "0101", "expected": false },
+    { "input": "100", "expected": false }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": "cfg-palindromes",
+  "type": "cfg-design",
+  "title": "CFG: Palindromes over {a, b}",
+  "description": "Construct a Context-Free Grammar that accepts all palindrome strings (reads the same forward and backward) over alphabet {a, b}.",
+  "alphabet": ["a", "b"],
+  "answerCFG": {
+    "variables": ["S"],
+    "terminals": ["a", "b"],
+    "startVariable": "S",
+    "productions": {
+      "S": ["aSa", "bSb", "a", "b", ""]
+    }
+  },
+  "testCases": [
+    { "input": "", "expected": true },
+    { "input": "a", "expected": true },
+    { "input": "aba", "expected": true },
+    { "input": "abba", "expected": true },
+    { "input": "baab", "expected": true },
+    { "input": "ab", "expected": false },
+    { "input": "abb", "expected": false }
+  ]
+}
