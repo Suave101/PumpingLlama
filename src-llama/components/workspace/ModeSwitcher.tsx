@@ -1,5 +1,5 @@
 import React from 'react';
-import { EditorMode } from './ProblemWorkspace';
+import { EditorMode } from '@/types/automata';
 
 interface ModeSwitcherProps {
   allowedModes: EditorMode[];

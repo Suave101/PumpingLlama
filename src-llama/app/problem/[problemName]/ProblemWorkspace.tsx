@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Problem,
   ProblemType,
+  EditorMode,
   DFA,
   PDA,
   CFG,
@@ -25,16 +26,6 @@ import { PumpingLemmaEditor } from '@/components/editors/PumpingLemmaEditor';
 import { AmbiguityEditor } from '@/components/editors/AmbiguityEditor';
 import { ParseTreeEditor } from '@/components/editors/ParseTreeEditor';
 import { RegexEditor } from '@/components/editors/RegexEditor';
-
-export type EditorMode =
-  | 'canvas'
-  | 'regex'
-  | 'cfg'
-  | 'pda'
-  | 'pumping'
-  | 'ambiguity'
-  | 'parse-tree'
-  | 'json';
 
 function getProblemModeConfig(type: ProblemType | string): {
   defaultMode: EditorMode;

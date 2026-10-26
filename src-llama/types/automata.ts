@@ -16,6 +16,16 @@ export type ProblemType =
   | 'parse-trees'
   | 'mega-problem';
 
+export type EditorMode =
+  | 'canvas'
+  | 'regex'
+  | 'cfg'
+  | 'pda'
+  | 'pumping'
+  | 'ambiguity'
+  | 'parse-tree'
+  | 'json';
+
 export type DFA = {
   states: string[];
   alphabet: string[];
