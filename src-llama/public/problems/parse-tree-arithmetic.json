@@ -1,0 +1,20 @@
+{
+  "id": "parse-tree-arithmetic",
+  "type": "parse-trees",
+  "title": "Parse Tree: Precedence Expression",
+  "description": "Construct the operator-precedence parse tree for 'a+b*a' given E -> E + T | T, T -> T * F | F, F -> a | b.",
+  "alphabet": ["a", "b", "+", "*"],
+  "answerCFG": {
+    "variables": ["E", "T", "F"],
+    "terminals": ["a", "b", "+", "*"],
+    "startSymbol": "E",
+    "rules": [
+      { "lhs": "E", "rhs": ["E + T", "T"] },
+      { "lhs": "T", "rhs": ["T * F", "F"] },
+      { "lhs": "F", "rhs": ["a", "b"] }
+    ]
+  },
+  "testCases": [
+    { "input": "a+b*a", "expected": true }
+  ]
+}

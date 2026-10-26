@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { notFound } from 'next/navigation';
 import { Problem } from '@/types/automata';
-import ProblemWorkspace from '@/app/problem/[problemName]/ProblemWorkspace';
+import ProblemWorkspace from './ProblemWorkspace';
 
 export async function generateStaticParams() {
   const problemsDir = path.join(process.cwd(), 'public/problems');

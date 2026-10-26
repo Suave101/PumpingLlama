@@ -1,0 +1,18 @@
+{
+  "id": "parse-tree-parentheses",
+  "type": "parse-trees",
+  "title": "Parse Tree: Balanced Parentheses",
+  "description": "Construct a valid parse tree deriving the target string '()()' using the grammar rules S -> ( S ) S | ε.",
+  "alphabet": ["(", ")"],
+  "answerCFG": {
+    "variables": ["S"],
+    "terminals": ["(", ")"],
+    "startSymbol": "S",
+    "rules": [
+      { "lhs": "S", "rhs": ["( S ) S", "ε"] }
+    ]
+  },
+  "testCases": [
+    { "input": "()()", "expected": true }
+  ]
+}
