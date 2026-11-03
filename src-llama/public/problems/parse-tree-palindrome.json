@@ -1,0 +1,18 @@
+{
+  "id": "parse-tree-palindrome",
+  "type": "parse-trees",
+  "title": "Parse Tree: Even Palindrome",
+  "description": "Construct a parse tree for the palindrome 'abba' using the grammar S -> a S a | b S b | ε.",
+  "alphabet": ["a", "b"],
+  "answerCFG": {
+    "variables": ["S"],
+    "terminals": ["a", "b"],
+    "startSymbol": "S",
+    "rules": [
+      { "lhs": "S", "rhs": ["a S a", "b S b", "ε"] }
+    ]
+  },
+  "testCases": [
+    { "input": "abba", "expected": true }
+  ]
+}

@@ -54,12 +54,12 @@ export function runPDA(pda: PDA, input: string): boolean {
       if (tr.from !== state) continue;
 
       // Check input matching (exact symbol or epsilon)
-      const consumesInput = tr.inputSymbol !== '';
+      const consumesInput = tr.inputSymbol !== '' && tr.inputSymbol !== 'ε';
       if (consumesInput && tr.inputSymbol !== currentSymbol) continue;
 
       // Check stack pop matching (exact top symbol or epsilon)
       const topStack = stack[stack.length - 1];
-      const requiresPop = tr.popSymbol !== '';
+      const requiresPop = tr.popSymbol !== '' && tr.popSymbol !== 'ε';
       if (requiresPop && topStack !== tr.popSymbol) continue;
 
       // Compute new stack
@@ -427,13 +427,55 @@ export function compileFormalRegex(regex: string, alphabet: string[]): RegExp {
   return new RegExp(`^(?:${body})$`);
 }
 
-export function grammarSpecToCFG(spec: GrammarSpec): CFG {
+// Problem files store grammars either as GrammarSpec or directly as a CFG
+// (the latter is what the Professor Studio exports)
+export function grammarSpecToCFG(spec: GrammarSpec | CFG): CFG {
+  if ('rules' in spec) return spec;
   return {
     variables: spec.variables,
     terminals: spec.terminals,
     startSymbol: spec.startVariable,
     rules: Object.entries(spec.productions).map(([lhs, rhs]) => ({ lhs, rhs })),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Exact DFA equivalence via BFS over the product automaton; returns the shortest
+// string on which the two DFAs disagree
+// ---------------------------------------------------------------------------
+export function findDfaCounterexample(
+  d1: DFA,
+  d2: DFA
+): { equivalent: boolean; counterexample: string | null } {
+  const alphabet = Array.from(new Set([...(d1.alphabet || []), ...(d2.alphabet || [])]));
+  const DEAD = '\u0000dead';
+
+  type ProductState = { s1: string; s2: string; path: string };
+  const startState: ProductState = { s1: d1.initialState || DEAD, s2: d2.initialState || DEAD, path: '' };
+  const queue: ProductState[] = [startState];
+  const visited = new Set<string>([`${startState.s1},${startState.s2}`]);
+
+  while (queue.length > 0) {
+    const { s1, s2, path } = queue.shift()!;
+    const isAccept1 = (d1.acceptStates || []).includes(s1);
+    const isAccept2 = (d2.acceptStates || []).includes(s2);
+
+    if (isAccept1 !== isAccept2) {
+      return { equivalent: false, counterexample: path };
+    }
+
+    for (const sym of alphabet) {
+      const nextS1 = d1.transitions?.[s1]?.[sym] || DEAD;
+      const nextS2 = d2.transitions?.[s2]?.[sym] || DEAD;
+      const key = `${nextS1},${nextS2}`;
+      if (!visited.has(key)) {
+        visited.add(key);
+        queue.push({ s1: nextS1, s2: nextS2, path: path + sym });
+      }
+    }
+  }
+
+  return { equivalent: true, counterexample: null };
 }
 
 // The language the student's answer must match, taken from the problem definition
@@ -532,6 +574,9 @@ export function evaluateSolution(
   } else if (studentInput.dfa) {
     const dfa = studentInput.dfa;
     accepts = (s) => runDFA(dfa, s);
+  } else if (studentInput.nfa) {
+    const nfa = studentInput.nfa;
+    accepts = (s) => runNFA(nfa, s);
   } else if (studentInput.regex !== undefined) {
     if (!studentInput.regex.trim()) return proofResult({ valid: false, reason: 'Enter a regular expression.' });
     try {
@@ -563,7 +608,29 @@ export function evaluateSolution(
     };
   }
 
-  // F. Exhaustive comparison against the reference language on all short strings
+  // F. Exact equivalence when both the answer and the reference are DFAs
+  if (studentInput.dfa && problem.answerDFA) {
+    const { equivalent, counterexample } = findDfaCounterexample(studentInput.dfa, problem.answerDFA);
+    if (!equivalent && counterexample !== null) {
+      const shouldAccept = runDFA(problem.answerDFA, counterexample);
+      return {
+        passed: false,
+        score: 0.9,
+        counterexample: show(counterexample),
+        testResults,
+        feedback: `All test cases pass, but your DFA ${shouldAccept ? 'rejects' : 'accepts'} "${show(counterexample)}", which should be ${shouldAccept ? 'accepted' : 'rejected'}.`,
+      };
+    }
+    return {
+      passed: true,
+      score: 1.0,
+      counterexample: null,
+      testResults,
+      feedback: 'Full Credit: all test cases pass and your DFA is equivalent to the target language.',
+    };
+  }
+
+  // G. Exhaustive comparison against the reference language on all short strings
   if (reference) {
     const budget = studentInput.pda ? 300 : 2000;
     const { strings, maxLength } = enumerateStrings(problem.alphabet, budget);
@@ -605,6 +672,19 @@ export function runDFA(dfa: DFA, input: string): boolean {
     if (!currentState) return false;
   }
   return (dfa.acceptStates || []).includes(currentState);
+}
+
+export function runNFA(nfa: NFA, input: string): boolean {
+  let currentStates = new Set([nfa.initialState]);
+  for (const sym of input) {
+    const nextStates = new Set<string>();
+    for (const state of currentStates) {
+      const targets = nfa.transitions[state]?.[sym] || [];
+      targets.forEach((t) => nextStates.add(t));
+    }
+    currentStates = nextStates;
+  }
+  return Array.from(currentStates).some((s) => nfa.acceptStates.includes(s));
 }
 
 // General CFG membership (Earley parser with Aycock–Horspool nullable handling),

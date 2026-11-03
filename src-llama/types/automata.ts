@@ -18,6 +18,16 @@ export type ProblemType =
   | 'parse-trees'
   | 'mega-problem';
 
+export type EditorMode =
+  | 'canvas'
+  | 'regex'
+  | 'cfg'
+  | 'pda'
+  | 'pumping'
+  | 'ambiguity'
+  | 'parse-tree'
+  | 'json';
+
 export type DFA = {
   states: string[];
   alphabet: string[];
@@ -109,8 +119,8 @@ export type Problem = {
   alphabet: string[];
   answerDFA?: DFA;
   answerNFA?: NFA;
-  answerCFG?: GrammarSpec;
-  givenCFG?: GrammarSpec; // grammar shown to the student (conversions, ambiguity, parse trees)
+  answerCFG?: GrammarSpec | CFG;
+  givenCFG?: GrammarSpec | CFG; // grammar shown to the student (conversions, ambiguity, parse trees)
   language?: BlockLanguage;
   answerPDA?: PDA;
   targetRegex?: string;

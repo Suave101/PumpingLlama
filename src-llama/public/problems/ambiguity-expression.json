@@ -1,0 +1,18 @@
+{
+  "id": "ambiguity-expression",
+  "type": "ambiguity-detection",
+  "title": "Ambiguity Proof: Arithmetic Operators",
+  "description": "Prove that the grammar E -> E + E | E * E | a | b is ambiguous by providing two distinct leftmost derivations for target string 'a+a*b'.",
+  "alphabet": ["a", "b", "+", "*"],
+  "answerCFG": {
+    "variables": ["E"],
+    "terminals": ["a", "b", "+", "*"],
+    "startSymbol": "E",
+    "rules": [
+      { "lhs": "E", "rhs": ["E + E", "E * E", "a", "b"] }
+    ]
+  },
+  "testCases": [
+    { "input": "a+a*b", "expected": true }
+  ]
+}

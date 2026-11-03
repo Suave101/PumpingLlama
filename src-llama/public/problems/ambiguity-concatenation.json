@@ -1,0 +1,18 @@
+{
+  "id": "ambiguity-concatenation",
+  "type": "ambiguity-detection",
+  "title": "Ambiguity Proof: Sequence Concatenation",
+  "description": "Prove that the string concatenation grammar S -> S S | a is ambiguous by proving string 'aaa' has multiple leftmost derivations.",
+  "alphabet": ["a"],
+  "answerCFG": {
+    "variables": ["S"],
+    "terminals": ["a"],
+    "startSymbol": "S",
+    "rules": [
+      { "lhs": "S", "rhs": ["S S", "a"] }
+    ]
+  },
+  "testCases": [
+    { "input": "aaa", "expected": true }
+  ]
+}

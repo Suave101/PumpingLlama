@@ -1,0 +1,18 @@
+{
+  "id": "ambiguity-dangling-else",
+  "type": "ambiguity-detection",
+  "title": "Ambiguity Proof: Dangling Else Problem",
+  "description": "Prove that conditional branching grammar S -> i S e S | i S | s is ambiguous for the target string 'i i s e s'.",
+  "alphabet": ["i", "e", "s"],
+  "answerCFG": {
+    "variables": ["S"],
+    "terminals": ["i", "e", "s"],
+    "startSymbol": "S",
+    "rules": [
+      { "lhs": "S", "rhs": ["i S e S", "i S", "s"] }
+    ]
+  },
+  "testCases": [
+    { "input": "iises", "expected": true }
+  ]
+}
