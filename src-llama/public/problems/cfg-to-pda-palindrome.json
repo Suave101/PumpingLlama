@@ -4,6 +4,14 @@
   "title": "Convert CFG to PDA (Even Palindromes)",
   "description": "Construct an equivalent Pushdown Automaton for the Context-Free Grammar generating even length palindromes over {0, 1}.",
   "alphabet": ["0", "1"],
+  "givenCFG": {
+    "variables": ["S"],
+    "terminals": ["0", "1"],
+    "startVariable": "S",
+    "productions": {
+      "S": ["0S0", "1S1", ""]
+    }
+  },
   "testCases": [
     { "input": "00", "expected": true },
     { "input": "11", "expected": true },

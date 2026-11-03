@@ -1,161 +1,225 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import {
-  Problem,
-  ProblemType,
-  PDA,
-  CFG,
-  PumpingLemmaSubmission,
-  AmbiguityProof,
-  VerificationResult,
-} from '@/types/automata';
-import { evaluateSolution } from '@/lib/logic';
+import { Problem, ProblemType, DFA, PDA, CFG, VerificationResult } from '@/types/automata';
+import { evaluateSolution, grammarSpecToCFG } from '@/lib/logic';
+import ParseTreeEditor, { EditableNode, makeNode, toParseTree } from './ParseTreeEditor';
+import { DFATable, GrammarCard } from './GivenMachines';
 
-type EditorMode = 'canvas' | 'regex' | 'cfg' | 'pda' | 'pumping' | 'ambiguity' | 'parse-tree' | 'json';
+type EditorMode = 'dfa' | 'regex' | 'cfg' | 'pda' | 'pumping' | 'ambiguity' | 'parse-tree';
 
-function getProblemModeConfig(type: ProblemType): { defaultMode: EditorMode; allowedModes: EditorMode[] } {
+const DFA_FORMAT = `{
+  "states": ["q0", "q1"],
+  "alphabet": [...],
+  "initialState": "q0",
+  "acceptStates": [...],
+  "transitions": { "q0": { "<symbol>": "<next state>" }, ... }
+}`;
+
+const PDA_FORMAT = `{
+  "states": [...],
+  "alphabet": [...],
+  "stackAlphabet": [...],
+  "initialState": "q0",
+  "initialStackSymbol": "Z",
+  "acceptStates": [...],
+  "acceptBy": "final-state" | "empty-stack",
+  "transitions": [
+    { "from": "q0", "to": "q1", "inputSymbol": "<symbol or empty>",
+      "popSymbol": "<symbol or empty>", "pushSymbols": [...] }
+  ]
+}`;
+
+// Types whose problem statement includes a grammar the student works from
+const GIVEN_GRAMMAR_TYPES: ProblemType[] = ['ambiguity-detection', 'parse-trees', 'cfg-to-cnf', 'cfg-to-gnf', 'cfg-to-pda'];
+// Types whose answerDFA is the input to the exercise rather than the answer
+const GIVEN_DFA_TYPES: ProblemType[] = ['dfa-to-regex', 'dfa-minimization'];
+
+function getEditorMode(type: ProblemType): EditorMode {
   switch (type) {
     case 'pda-construction':
     case 'cfg-to-pda':
-      return { defaultMode: 'pda', allowedModes: ['pda', 'json'] };
-
+      return 'pda';
     case 'cfg-to-gnf':
     case 'cfg-to-cnf':
     case 'cfg-construction':
-      return { defaultMode: 'cfg', allowedModes: ['cfg', 'json'] };
-
+    case 'cfg-design':
+      return 'cfg';
     case 'pumping-lemma':
-      return { defaultMode: 'pumping', allowedModes: ['pumping'] };
-
+      return 'pumping';
     case 'ambiguity-detection':
-      return { defaultMode: 'ambiguity', allowedModes: ['ambiguity', 'cfg'] };
-
+      return 'ambiguity';
     case 'parse-trees':
-      return { defaultMode: 'parse-tree', allowedModes: ['parse-tree', 'cfg'] };
-
+      return 'parse-tree';
     case 'dfa-to-regex':
     case 'regex-construction':
-      return { defaultMode: 'regex', allowedModes: ['regex'] };
-
+      return 'regex';
     default:
-      return { defaultMode: 'canvas', allowedModes: ['canvas', 'json'] };
+      return 'dfa';
   }
 }
 
-export default function ProblemWorkspace({ problem }: { problem: Problem }) {
-  const modeConfig = useMemo(() => getProblemModeConfig(problem.type), [problem.type]);
-  const [editorMode, setEditorMode] = useState<EditorMode>(modeConfig.defaultMode);
+const EPSILON_WORDS = ['ε', 'eps', 'epsilon', 'λ', 'lambda'];
 
-  useEffect(() => {
-    setEditorMode(modeConfig.defaultMode);
-  }, [problem.id, modeConfig]);
-
-  // Editor States
-  const [cfgText, setCfgText] = useState<string>('S -> A B | a\nA -> a\nB -> b');
-  const [pdaJson, setPdaJson] = useState<string>(
-    JSON.stringify(
-      {
-        states: ['q0', 'q1', 'q2'],
-        alphabet: ['a', 'b'],
-        stackAlphabet: ['Z0', 'A'],
-        initialState: 'q0',
-        initialStackSymbol: 'Z0',
-        acceptStates: ['q2'],
-        acceptBy: 'final-state',
-        transitions: [
-          { from: 'q0', to: 'q0', inputSymbol: 'a', popSymbol: 'Z0', pushSymbols: ['A', 'Z0'] },
-          { from: 'q0', to: 'q1', inputSymbol: 'b', popSymbol: 'A', pushSymbols: [] },
-          { from: 'q1', to: 'q2', inputSymbol: '', popSymbol: 'Z0', pushSymbols: ['Z0'] },
-        ],
-      },
-      null,
-      2
-    )
-  );
-
-  const [pumpingState, setPumpingState] = useState<PumpingLemmaSubmission>({
-    p: 4,
-    w: 'aaaabbbb',
-    u: 'aa',
-    v: 'aa',
-    x: '',
-    y: 'bb',
-    z: 'bb',
-    i: 0,
-  });
-
-  const [ambiguityState, setAmbiguityState] = useState<AmbiguityProof>({
-    stringW: 'a+a*a',
-    leftDerivation1: ['E', 'E+E', 'a+E', 'a+E*E', 'a+a*E', 'a+a*a'],
-    leftDerivation2: ['E', 'E*E', 'E+E*E', 'a+E*E', 'a+a*E', 'a+a*a'],
-  });
-
-  const [parseTreeInput, setParseTreeInput] = useState<string>(
-    JSON.stringify({ symbol: 'S', children: [{ symbol: 'a' }, { symbol: 'b' }] }, null, 2)
-  );
-
-  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
-
-  const parseCFGInput = (): CFG => {
-    const lines = cfgText.split('\n').filter((l) => l.trim().length > 0);
-    const rules = lines.map((line) => {
-      const parts = line.split(/->|::=/).map((s) => s.trim());
-      const lhs = parts[0] || 'S';
-      const rhsPart = parts[1] || '';
-      const rhs = rhsPart.split('|').map((s) => s.trim());
+function parseCFGText(text: string, alphabet: string[]): CFG {
+  const rules = text
+    .split('\n')
+    .filter((l) => l.trim().length > 0)
+    .map((line) => {
+      const [lhs = '', rhsPart = ''] = line.split(/->|→|::=/).map((s) => s.trim());
+      const rhs = rhsPart.split('|').map((s) => {
+        const alt = s.trim();
+        return EPSILON_WORDS.includes(alt.toLowerCase()) ? '' : alt;
+      });
       return { lhs, rhs };
     });
 
-    return {
-      variables: Array.from(new Set(rules.map((r) => r.lhs))),
-      terminals: problem.alphabet || ['a', 'b'],
-      rules,
-      startSymbol: rules[0]?.lhs || 'S',
-    };
+  // Merge repeated left-hand sides (e.g. two "S -> ..." lines)
+  const merged: CFG['rules'] = [];
+  for (const r of rules) {
+    const existing = merged.find((m) => m.lhs === r.lhs);
+    if (existing) existing.rhs.push(...r.rhs);
+    else merged.push({ lhs: r.lhs, rhs: [...r.rhs] });
+  }
+
+  return {
+    variables: merged.map((r) => r.lhs),
+    terminals: alphabet,
+    rules: merged,
+    startSymbol: merged[0]?.lhs || 'S',
+  };
+}
+
+const errorResult = (feedback: string): VerificationResult => ({
+  passed: false,
+  score: 0,
+  counterexample: null,
+  testResults: [],
+  feedback,
+});
+
+const inputClass =
+  'w-full bg-slate-950 p-2 rounded border border-slate-800 text-emerald-300 font-mono focus:outline-none focus:border-emerald-500';
+const textareaClass =
+  'w-full bg-slate-900 font-mono text-xs p-4 rounded-lg border border-slate-800 text-emerald-300 focus:outline-none focus:border-emerald-500';
+
+function FormatHint({ format }: { format: string }) {
+  return (
+    <details className="text-xs text-slate-400">
+      <summary className="cursor-pointer select-none hover:text-slate-200">Show expected JSON format</summary>
+      <pre className="mt-2 p-3 bg-slate-900 border border-slate-800 rounded font-mono text-[11px] text-slate-400 overflow-x-auto">
+        {format}
+      </pre>
+    </details>
+  );
+}
+
+function DerivationEditor({
+  label,
+  steps,
+  onChange,
+}: {
+  label: string;
+  steps: string[];
+  onChange: (steps: string[]) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-slate-400">{label}</span>
+      {steps.map((step, idx) => (
+        <div key={idx} className="flex items-center gap-2">
+          <span className="w-6 text-right text-slate-500 font-mono">{idx === 0 ? '' : '⇒'}</span>
+          <input
+            type="text"
+            value={step}
+            onChange={(e) => onChange(steps.map((s, i) => (i === idx ? e.target.value : s)))}
+            aria-label={`${label} step ${idx + 1}`}
+            className={inputClass}
+          />
+          <button
+            type="button"
+            onClick={() => onChange(steps.length > 1 ? steps.filter((_, i) => i !== idx) : [''])}
+            aria-label={`Remove step ${idx + 1}`}
+            className="px-2 py-1 rounded text-slate-500 hover:text-red-300 hover:bg-slate-800"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange([...steps, ''])}
+        className="self-start ml-8 px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200"
+      >
+        + Add step
+      </button>
+    </div>
+  );
+}
+
+export default function ProblemWorkspace({ problem }: { problem: Problem }) {
+  const editorMode = getEditorMode(problem.type);
+  const alphabet = useMemo(() => problem.alphabet || [], [problem.alphabet]);
+
+  const givenCFG = useMemo(
+    () => (problem.givenCFG ? grammarSpecToCFG(problem.givenCFG) : null),
+    [problem.givenCFG]
+  );
+  const showGivenGrammar = givenCFG && GIVEN_GRAMMAR_TYPES.includes(problem.type);
+  const showGivenDFA = problem.answerDFA && GIVEN_DFA_TYPES.includes(problem.type);
+  const targetString = problem.testCases.find((tc) => tc.expected)?.input ?? '';
+
+  // Editor States (all start empty)
+  const [dfaJson, setDfaJson] = useState('');
+  const [regexText, setRegexText] = useState('');
+  const [cfgText, setCfgText] = useState('');
+  const [pdaJson, setPdaJson] = useState('');
+  const [pumpingW, setPumpingW] = useState('');
+  const [ambiguityW, setAmbiguityW] = useState('');
+  const [derivation1, setDerivation1] = useState<string[]>(['']);
+  const [derivation2, setDerivation2] = useState<string[]>(['']);
+  const [parseTree, setParseTree] = useState<EditableNode>(() => makeNode(givenCFG?.startSymbol || 'S'));
+
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+
+  const parseJson = <T,>(text: string, what: string): T | string => {
+    if (!text.trim()) return `Enter a ${what} definition first.`;
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      return `Invalid ${what} JSON structure.`;
+    }
   };
 
   const handleVerify = () => {
-    let payload: Parameters<typeof evaluateSolution>[0] = {};
+    const payload: Parameters<typeof evaluateSolution>[0] = {};
 
-    if (editorMode === 'pda') {
-      try {
-        payload.pda = JSON.parse(pdaJson) as PDA;
-      } catch {
-        alert('Invalid PDA JSON structure.');
-        return;
-      }
+    if (editorMode === 'dfa') {
+      const dfa = parseJson<DFA>(dfaJson, 'DFA');
+      if (typeof dfa === 'string') return setVerificationResult(errorResult(dfa));
+      payload.dfa = dfa;
+    } else if (editorMode === 'pda') {
+      const pda = parseJson<PDA>(pdaJson, 'PDA');
+      if (typeof pda === 'string') return setVerificationResult(errorResult(pda));
+      payload.pda = pda;
+    } else if (editorMode === 'regex') {
+      payload.regex = regexText;
     } else if (editorMode === 'cfg') {
-      payload.cfg = parseCFGInput();
+      payload.cfg = parseCFGText(cfgText, alphabet);
     } else if (editorMode === 'pumping') {
-      payload.pumping = pumpingState;
-    } else if (editorMode === 'ambiguity') {
-      payload.ambiguity = ambiguityState;
-      payload.cfg = parseCFGInput();
-    } else if (editorMode === 'parse-tree') {
-      try {
-        payload.parseTree = {
-          tree: JSON.parse(parseTreeInput),
-          target: problem.testCases[0]?.input || 'ab',
-        };
-        payload.cfg = parseCFGInput();
-      } catch {
-        alert('Invalid Parse Tree JSON.');
-        return;
+      payload.pumping = { w: pumpingW };
+    } else if (editorMode === 'ambiguity' || editorMode === 'parse-tree') {
+      if (!givenCFG) return setVerificationResult(errorResult('This problem does not define its grammar.'));
+      payload.cfg = givenCFG;
+      if (editorMode === 'ambiguity') {
+        payload.ambiguity = { stringW: ambiguityW, leftDerivation1: derivation1, leftDerivation2: derivation2 };
+      } else {
+        payload.parseTree = { tree: toParseTree(parseTree), target: targetString };
       }
     }
 
-    const dummyDFA = problem.answerDFA || {
-      states: [],
-      alphabet: problem.alphabet || ['a', 'b'],
-      transitions: {},
-      initialState: '',
-      acceptStates: [],
-    };
-
-    const result = evaluateSolution(payload, dummyDFA, problem.testCases, problem.type);
-    setVerificationResult(result);
+    setVerificationResult(evaluateSolution(payload, problem));
   };
 
   return (
@@ -178,51 +242,75 @@ export default function ProblemWorkspace({ problem }: { problem: Problem }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-7 flex flex-col gap-6">
-            {/* Mode Switcher */}
-            {modeConfig.allowedModes.length > 1 && (
-              <div className="flex justify-between items-center bg-slate-900 p-2 rounded-lg border border-slate-800">
-                <span className="text-xs text-slate-400 pl-2">Editor Mode:</span>
-                <div className="flex gap-1">
-                  {modeConfig.allowedModes.map((mode) => (
-                    <button
-                      key={mode}
-                      onClick={() => setEditorMode(mode)}
-                      className={`px-3 py-1 rounded text-xs font-medium uppercase ${
-                        editorMode === mode ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {mode}
-                    </button>
-                  ))}
-                </div>
+            {showGivenGrammar && <GrammarCard cfg={givenCFG} title="Given grammar" />}
+            {showGivenDFA && <DFATable dfa={problem.answerDFA!} />}
+
+            {/* DFA Editor */}
+            {editorMode === 'dfa' && (
+              <div className="flex flex-col gap-2">
+                <label htmlFor="dfa-json" className="text-xs font-semibold text-slate-300">
+                  Deterministic Finite Automaton Definition (JSON format), Σ = {'{'}{alphabet.join(', ')}{'}'}:
+                </label>
+                <textarea
+                  id="dfa-json"
+                  value={dfaJson}
+                  onChange={(e) => setDfaJson(e.target.value)}
+                  rows={14}
+                  spellCheck={false}
+                  className={textareaClass}
+                />
+                <FormatHint format={DFA_FORMAT} />
+              </div>
+            )}
+
+            {/* Regex Editor */}
+            {editorMode === 'regex' && (
+              <div className="flex flex-col gap-2">
+                <label htmlFor="regex" className="text-xs font-semibold text-slate-300">
+                  Regular Expression (use + or | for union, * for star, ε for the empty string):
+                </label>
+                <input
+                  id="regex"
+                  type="text"
+                  value={regexText}
+                  onChange={(e) => setRegexText(e.target.value)}
+                  spellCheck={false}
+                  className="w-full bg-slate-900 font-mono text-sm p-4 rounded-lg border border-slate-800 text-emerald-300 focus:outline-none focus:border-emerald-500"
+                />
               </div>
             )}
 
             {/* PDA Editor */}
             {editorMode === 'pda' && (
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-300">
+                <label htmlFor="pda-json" className="text-xs font-semibold text-slate-300">
                   Pushdown Automaton Definition (JSON format):
                 </label>
                 <textarea
+                  id="pda-json"
                   value={pdaJson}
                   onChange={(e) => setPdaJson(e.target.value)}
                   rows={14}
-                  className="w-full bg-slate-900 font-mono text-xs p-4 rounded-lg border border-slate-800 text-emerald-300 focus:outline-none focus:border-emerald-500"
+                  spellCheck={false}
+                  className={textareaClass}
                 />
+                <FormatHint format={PDA_FORMAT} />
               </div>
             )}
 
             {/* CFG Editor */}
             {editorMode === 'cfg' && (
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-300">
-                  Grammar Production Rules (e.g. S -&gt; A B | a):
+                <label htmlFor="cfg-text" className="text-xs font-semibold text-slate-300">
+                  Grammar Production Rules, one variable per line (format: S -&gt; aSb | ε). The first line&apos;s
+                  variable is the start symbol.
                 </label>
                 <textarea
+                  id="cfg-text"
                   value={cfgText}
                   onChange={(e) => setCfgText(e.target.value)}
                   rows={10}
+                  spellCheck={false}
                   className="w-full bg-slate-900 font-mono text-sm p-4 rounded-lg border border-slate-800 text-emerald-300 focus:outline-none focus:border-emerald-500"
                 />
               </div>
@@ -230,50 +318,27 @@ export default function ProblemWorkspace({ problem }: { problem: Problem }) {
 
             {/* Pumping Lemma Form */}
             {editorMode === 'pumping' && (
-              <div className="flex flex-col gap-4 bg-slate-900 p-5 rounded-xl border border-slate-800">
-                <h3 className="text-sm font-bold text-emerald-400">Pumping Lemma Adversarial Proof (w = u v x y z)</h3>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <label className="text-slate-400 block mb-1">Pumping Length (p):</label>
-                    <input
-                      type="number"
-                      value={pumpingState.p}
-                      onChange={(e) => setPumpingState({ ...pumpingState, p: parseInt(e.target.value) || 0 })}
-                      className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-white font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-slate-400 block mb-1">Target String w (|w| ≥ p):</label>
-                    <input
-                      type="text"
-                      value={pumpingState.w}
-                      onChange={(e) => setPumpingState({ ...pumpingState, w: e.target.value })}
-                      className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-white font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-5 gap-2 text-xs">
-                  {['u', 'v', 'x', 'y', 'z'].map((part) => (
-                    <div key={part}>
-                      <label className="text-slate-400 block mb-1 uppercase font-bold">{part}:</label>
-                      <input
-                        type="text"
-                        value={(pumpingState as any)[part]}
-                        onChange={(e) => setPumpingState({ ...pumpingState, [part]: e.target.value })}
-                        className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-emerald-300 font-mono"
-                      />
-                    </div>
-                  ))}
-                </div>
-
+              <div className="flex flex-col gap-4 bg-slate-900 p-5 rounded-xl border border-slate-800 text-xs">
+                <h3 className="text-sm font-bold text-emerald-400">Pumping Lemma Proof</h3>
+                <ol className="list-decimal list-inside text-slate-400 space-y-1 leading-relaxed">
+                  <li>The adversary picks a pumping length p ≥ 1.</li>
+                  <li>You pick a string w ∈ L, written in terms of p, with |w| ≥ p.</li>
+                  <li>
+                    The adversary splits w = uvxyz with |vxy| ≤ p and |vy| ≥ 1. The checker tries every such split.
+                  </li>
+                  <li>You win if, for every split, some uvⁱxyⁱz is not in L.</li>
+                </ol>
                 <div>
-                  <label className="text-slate-400 text-xs block mb-1">Pumping Exponent (i):</label>
+                  <label htmlFor="pumping-w" className="text-slate-400 block mb-1">
+                    Your string w (exponent notation: x^p, x^{'{'}2p+1{'}'}, (xy)^p):
+                  </label>
                   <input
-                    type="number"
-                    value={pumpingState.i}
-                    onChange={(e) => setPumpingState({ ...pumpingState, i: parseInt(e.target.value) || 0 })}
-                    className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-white font-mono text-xs"
+                    id="pumping-w"
+                    type="text"
+                    value={pumpingW}
+                    onChange={(e) => setPumpingW(e.target.value)}
+                    spellCheck={false}
+                    className={`${inputClass} text-sm`}
                   />
                 </div>
               </div>
@@ -281,34 +346,28 @@ export default function ProblemWorkspace({ problem }: { problem: Problem }) {
 
             {/* Ambiguity Proof Form */}
             {editorMode === 'ambiguity' && (
-              <div className="flex flex-col gap-4 bg-slate-900 p-5 rounded-xl border border-slate-800 text-xs">
+              <div className="flex flex-col gap-5 bg-slate-900 p-5 rounded-xl border border-slate-800 text-xs">
                 <h3 className="text-sm font-bold text-emerald-400">Ambiguity Proof (Two Leftmost Derivations)</h3>
                 <div>
-                  <label className="text-slate-400 block mb-1">Target String w:</label>
+                  <label htmlFor="ambiguity-w" className="text-slate-400 block mb-1">
+                    Target String w:
+                  </label>
                   <input
+                    id="ambiguity-w"
                     type="text"
-                    value={ambiguityState.stringW}
-                    onChange={(e) => setAmbiguityState({ ...ambiguityState, stringW: e.target.value })}
-                    className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-white font-mono"
+                    value={ambiguityW}
+                    onChange={(e) => setAmbiguityW(e.target.value)}
+                    spellCheck={false}
+                    className={inputClass}
                   />
                 </div>
-                <div>
-                  <label className="text-slate-400 block mb-1">Leftmost Derivation #1 (comma-separated steps):</label>
-                  <input
-                    type="text"
-                    value={ambiguityState.leftDerivation1.join(', ')}
-                    onChange={(e) => setAmbiguityState({ ...ambiguityState, leftDerivation1: e.target.value.split(',').map((s) => s.trim()) })}
-                    className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-emerald-300 font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 block mb-1">Leftmost Derivation #2 (comma-separated steps):</label>
-                  <input
-                    type="text"
-                    value={ambiguityState.leftDerivation2.join(', ')}
-                    onChange={(e) => setAmbiguityState({ ...ambiguityState, leftDerivation2: e.target.value.split(',').map((s) => s.trim()) })}
-                    className="w-full bg-slate-950 p-2 rounded border border-slate-800 text-emerald-300 font-mono"
-                  />
+                <p className="text-slate-500">
+                  Write one sentential form per step, starting with the start symbol. Each step must replace the
+                  leftmost variable using one production.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DerivationEditor label="Leftmost Derivation #1" steps={derivation1} onChange={setDerivation1} />
+                  <DerivationEditor label="Leftmost Derivation #2" steps={derivation2} onChange={setDerivation2} />
                 </div>
               </div>
             )}
@@ -316,15 +375,10 @@ export default function ProblemWorkspace({ problem }: { problem: Problem }) {
             {/* Parse Tree Editor */}
             {editorMode === 'parse-tree' && (
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-300">
-                  Parse Tree Hierarchy (JSON structure):
-                </label>
-                <textarea
-                  value={parseTreeInput}
-                  onChange={(e) => setParseTreeInput(e.target.value)}
-                  rows={10}
-                  className="w-full bg-slate-900 font-mono text-xs p-4 rounded-lg border border-slate-800 text-emerald-300 focus:outline-none focus:border-emerald-500"
-                />
+                <span className="text-xs font-semibold text-slate-300">
+                  Parse tree for <span className="font-mono text-emerald-300">&quot;{targetString}&quot;</span>:
+                </span>
+                <ParseTreeEditor root={parseTree} onChange={setParseTree} />
               </div>
             )}
 
@@ -372,7 +426,7 @@ export default function ProblemWorkspace({ problem }: { problem: Problem }) {
                               : 'bg-red-950/30 border-red-900/50 text-red-300'
                           }`}
                         >
-                          <span className="font-mono">"{res.input}"</span>
+                          <span className="font-mono">&quot;{res.input}&quot;</span>
                           <span>{res.passed ? '✓ Passed' : '✗ Failed'}</span>
                         </div>
                       ))}

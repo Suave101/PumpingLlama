@@ -2,8 +2,15 @@
   "id": "pumping-lemma-an-bn-cn",
   "type": "pumping-lemma",
   "title": "Pumping Lemma: L = { aⁿbⁿcⁿ | n ≥ 0 }",
-  "description": "Prove that L = { aⁿbⁿcⁿ | n ≥ 0 } is not context-free by choosing a pumping length p, string w, decomposition u v x y z, and exponent i to produce a string outside L.",
+  "description": "Prove that L = { aⁿbⁿcⁿ | n ≥ 0 } is not context-free by choosing a string w (in terms of the pumping length p) such that every split w = uvxyz with |vxy| ≤ p and |vy| ≥ 1 can be pumped out of L.",
   "alphabet": ["a", "b", "c"],
+  "language": {
+    "blocks": [
+      { "symbol": "a", "count": "n" },
+      { "symbol": "b", "count": "n" },
+      { "symbol": "c", "count": "n" }
+    ]
+  },
   "testCases": [
     { "input": "abc", "expected": true },
     { "input": "aabbcc", "expected": true },

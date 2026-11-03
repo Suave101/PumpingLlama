@@ -1,4 +1,6 @@
 export type ProblemType =
+  | 'dfa-design'
+  | 'cfg-design'
   | 'dfa-construction'
   | 'regex-construction'
   | 'nfa-construction'
@@ -44,6 +46,14 @@ export type CFG = {
   startSymbol: string;
 };
 
+// Grammar shape used by the problem JSON files (convert with grammarSpecToCFG)
+export type GrammarSpec = {
+  variables: string[];
+  terminals: string[];
+  startVariable: string;
+  productions: Record<string, string[]>;
+};
+
 export type PDATransition = {
   from: string;
   to: string;
@@ -74,15 +84,16 @@ export type AmbiguityProof = {
   leftDerivation2: string[]; // e.g., ["S", "AC", "aC", "ab"]
 };
 
+// w written in terms of the pumping length p, e.g. "x^p y^{2p+1}" or "(xy)^p"
 export type PumpingLemmaSubmission = {
-  p: number;
   w: string;
-  u: string;
-  v: string;
-  x: string;
-  y: string;
-  z: string;
-  i: number;
+};
+
+// Declarative membership for non-context-free languages, e.g. aⁿbⁿcⁿ:
+// blocks [{a,n},{b,n},{c,n}] means a^n b^n c^n, blocks sharing a count must be equal length
+export type BlockLanguage = {
+  blocks: { symbol: string; count: string }[];
+  min?: Record<string, number>;
 };
 
 export type TestCase = {
@@ -98,7 +109,9 @@ export type Problem = {
   alphabet: string[];
   answerDFA?: DFA;
   answerNFA?: NFA;
-  answerCFG?: CFG;
+  answerCFG?: GrammarSpec;
+  givenCFG?: GrammarSpec; // grammar shown to the student (conversions, ambiguity, parse trees)
+  language?: BlockLanguage;
   answerPDA?: PDA;
   targetRegex?: string;
   testCases: TestCase[];

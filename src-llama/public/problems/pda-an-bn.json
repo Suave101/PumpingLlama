@@ -4,6 +4,14 @@
   "title": "PDA for aⁿbⁿ (n ≥ 1)",
   "description": "Construct a Pushdown Automaton (PDA) that accepts the language L = { aⁿbⁿ | n ≥ 1 }.",
   "alphabet": ["a", "b"],
+  "answerCFG": {
+    "variables": ["S"],
+    "terminals": ["a", "b"],
+    "startVariable": "S",
+    "productions": {
+      "S": ["aSb", "ab"]
+    }
+  },
   "testCases": [
     { "input": "ab", "expected": true },
     { "input": "aabb", "expected": true },
@@ -13,6 +21,6 @@
     { "input": "aab", "expected": false },
     { "input": "abb", "expected": false },
     { "input": "ba", "expected": false },
-    { "input": "ε", "expected": false }
+    { "input": "", "expected": false }
   ]
 }

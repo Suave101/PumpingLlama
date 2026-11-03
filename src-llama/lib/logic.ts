@@ -6,8 +6,10 @@ import {
   ParseTreeNode,
   AmbiguityProof,
   PumpingLemmaSubmission,
-  TestCase,
+  Problem,
   VerificationResult,
+  GrammarSpec,
+  BlockLanguage,
 } from '@/types/automata';
 
 // ---------------------------------------------------------------------------
@@ -43,12 +45,12 @@ export function runPDA(pda: PDA, input: string): boolean {
     if (pda.acceptBy === 'empty-stack') {
       if (inputIdx === cleanInput.length && stack.length === 0) return true;
     } else {
-      if (inputIdx === cleanInput.length && pda.acceptStates.includes(state)) return true;
+      if (inputIdx === cleanInput.length && (pda.acceptStates || []).includes(state)) return true;
     }
 
     const currentSymbol = inputIdx < cleanInput.length ? cleanInput[inputIdx] : null;
 
-    for (const tr of pda.transitions) {
+    for (const tr of pda.transitions || []) {
       if (tr.from !== state) continue;
 
       // Check input matching (exact symbol or epsilon)
@@ -89,22 +91,28 @@ export function runPDA(pda: PDA, input: string): boolean {
 // 2. Normal Forms Verification (CNF & GNF Rules Validation)
 // ---------------------------------------------------------------------------
 export function checkChomskyNormalForm(cfg: CFG): { valid: boolean; reason?: string } {
+  const startOnRhs = cfg.rules.some((r) => r.rhs.some((p) => normalizeForm(p).includes(cfg.startSymbol)));
+
   for (const rule of cfg.rules) {
     for (const prod of rule.rhs) {
-      if (prod === '' || prod === 'ε') {
+      if (normalizeForm(prod) === '') {
         if (rule.lhs !== cfg.startSymbol) {
           return { valid: false, reason: `ε-production found in non-start variable: ${rule.lhs} -> ε` };
+        }
+        if (startOnRhs) {
+          return { valid: false, reason: `${rule.lhs} -> ε is only allowed when ${rule.lhs} never appears on a right-hand side.` };
         }
         continue;
       }
 
+      const symbols = normalizeForm(prod).split('');
+
       // Single terminal rule: A -> a
-      if (prod.length === 1 && cfg.terminals.includes(prod)) {
+      if (symbols.length === 1 && cfg.terminals.includes(symbols[0])) {
         continue;
       }
 
       // Two variable rule: A -> BC
-      const symbols = prod.split('').filter((s) => s.trim().length > 0);
       if (symbols.length === 2 && symbols.every((s) => cfg.variables.includes(s))) {
         continue;
       }
@@ -121,14 +129,14 @@ export function checkChomskyNormalForm(cfg: CFG): { valid: boolean; reason?: str
 export function checkGreibachNormalForm(cfg: CFG): { valid: boolean; reason?: string } {
   for (const rule of cfg.rules) {
     for (const prod of rule.rhs) {
-      if (prod === '' || prod === 'ε') {
+      if (normalizeForm(prod) === '') {
         if (rule.lhs !== cfg.startSymbol) {
           return { valid: false, reason: `ε-production found in non-start variable: ${rule.lhs} -> ε` };
         }
         continue;
       }
 
-      const symbols = prod.split('').filter((s) => s.trim().length > 0);
+      const symbols = normalizeForm(prod).split('');
       const firstSym = symbols[0];
       const restSyms = symbols.slice(1);
 
@@ -153,34 +161,93 @@ export function checkGreibachNormalForm(cfg: CFG): { valid: boolean; reason?: st
 // ---------------------------------------------------------------------------
 // 3. Ambiguity & Parse Tree Verifiers
 // ---------------------------------------------------------------------------
+// Strips whitespace and ε markers so "A B", "AB" and "ε" compare as sentential forms
+function normalizeForm(s: string): string {
+  return s.replace(/\s+/g, '').replace(/ε/g, '');
+}
+
+function productionsOf(cfg: CFG, variable: string): string[] {
+  return cfg.rules.filter((r) => r.lhs === variable).flatMap((r) => r.rhs.map(normalizeForm));
+}
+
+function checkLeftmostDerivation(derivation: string[], cfg: CFG, label: string): string | null {
+  const steps = derivation.map(normalizeForm);
+  if (steps[0] !== cfg.startSymbol) {
+    return `${label} must begin with the start symbol '${cfg.startSymbol}'.`;
+  }
+  for (let k = 0; k < steps.length - 1; k++) {
+    const from = steps[k];
+    const to = steps[k + 1];
+    const idx = from.split('').findIndex((s) => cfg.variables.includes(s));
+    if (idx === -1) {
+      return `${label}: '${from}' has no variable left to expand.`;
+    }
+    const prefix = from.slice(0, idx);
+    const suffix = from.slice(idx + 1);
+    const ok = productionsOf(cfg, from[idx]).some((p) => prefix + p + suffix === to);
+    if (!ok) {
+      return `${label}, step ${k + 1}: '${from}' ⇒ '${to}' is not a leftmost derivation step (expand the leftmost '${from[idx]}').`;
+    }
+  }
+  return null;
+}
+
 export function verifyAmbiguityProof(proof: AmbiguityProof, cfg: CFG): { valid: boolean; reason: string } {
-  if (!proof.stringW) return { valid: false, reason: 'Target string w cannot be empty.' };
+  const w = normalizeForm(proof.stringW || '');
+  if (!w) return { valid: false, reason: 'Target string w cannot be empty.' };
 
-  const d1 = proof.leftDerivation1;
-  const d2 = proof.leftDerivation2;
+  const d1 = (proof.leftDerivation1 || []).filter((s) => s.trim().length > 0);
+  const d2 = (proof.leftDerivation2 || []).filter((s) => s.trim().length > 0);
 
-  if (!d1 || d1.length < 2 || !d2 || d2.length < 2) {
-    return { valid: false, reason: 'Two distinct derivation sequences are required.' };
+  if (d1.length < 2 || d2.length < 2) {
+    return { valid: false, reason: 'Each derivation needs at least two steps.' };
   }
 
-  if (d1.join('=>') === d2.join('=>')) {
+  if (d1.map(normalizeForm).join('=>') === d2.map(normalizeForm).join('=>')) {
     return { valid: false, reason: 'The two provided derivations are identical.' };
   }
 
-  const end1 = d1[d1.length - 1];
-  const end2 = d2[d2.length - 1];
-
-  if (end1 !== proof.stringW || end2 !== proof.stringW) {
-    return { valid: false, reason: `Derivations do not both yield string "${proof.stringW}".` };
+  if (normalizeForm(d1[d1.length - 1]) !== w || normalizeForm(d2[d2.length - 1]) !== w) {
+    return { valid: false, reason: `Derivations do not both end in the string "${w}".` };
   }
 
-  return { valid: true, reason: `Valid proof! String "${proof.stringW}" has 2 distinct leftmost derivations.` };
+  const err = checkLeftmostDerivation(d1, cfg, 'Derivation #1') ?? checkLeftmostDerivation(d2, cfg, 'Derivation #2');
+  if (err) return { valid: false, reason: err };
+
+  return { valid: true, reason: `Valid proof! String "${w}" has 2 distinct leftmost derivations.` };
 }
 
 export function verifyParseTree(tree: ParseTreeNode, cfg: CFG, targetString: string): { valid: boolean; reason: string } {
   if (tree.symbol !== cfg.startSymbol) {
     return { valid: false, reason: `Root of parse tree must be start symbol '${cfg.startSymbol}'.` };
   }
+
+  const checkNode = (node: ParseTreeNode): string | null => {
+    if (!node.symbol.trim()) {
+      return 'Every node needs a symbol (double-click a node to edit it).';
+    }
+    if (!node.children || node.children.length === 0) {
+      if (cfg.variables.includes(node.symbol)) {
+        return `Leaf '${node.symbol}' is a variable; every leaf must be a terminal or ε.`;
+      }
+      return null;
+    }
+    if (!cfg.variables.includes(node.symbol)) {
+      return `'${node.symbol}' is a terminal, so it cannot have children.`;
+    }
+    const childForm = normalizeForm(node.children.map((c) => c.symbol).join(''));
+    if (!productionsOf(cfg, node.symbol).includes(childForm)) {
+      return `No production ${node.symbol} -> ${childForm || 'ε'} exists in the grammar.`;
+    }
+    for (const child of node.children) {
+      const err = checkNode(child);
+      if (err) return err;
+    }
+    return null;
+  };
+
+  const structureError = checkNode(tree);
+  if (structureError) return { valid: false, reason: structureError };
 
   const getYield = (node: ParseTreeNode): string => {
     if (!node.children || node.children.length === 0) {
@@ -198,42 +265,210 @@ export function verifyParseTree(tree: ParseTreeNode, cfg: CFG, targetString: str
 }
 
 // ---------------------------------------------------------------------------
-// 4. Pumping Lemma Proof Verifier (CFL Pumping Lemma: w = uvxyz)
+// 4. Pumping Lemma (CFL) — the student picks w in terms of p, the checker plays
+//    the adversary and tries every split w = uvxyz with |vxy| ≤ p and |vy| ≥ 1
 // ---------------------------------------------------------------------------
-export function verifyPumpingLemma(proof: PumpingLemmaSubmission, testCases: TestCase[]): { valid: boolean; reason: string } {
-  const { p, w, u, v, x, y, z, i } = proof;
+export function inBlockLanguage(lang: BlockLanguage, s: string): boolean {
+  let pos = 0;
+  const counts: Record<string, number> = {};
+  for (const block of lang.blocks) {
+    let len = 0;
+    while (s[pos] === block.symbol) {
+      pos++;
+      len++;
+    }
+    if (block.count in counts && counts[block.count] !== len) return false;
+    counts[block.count] = len;
+  }
+  if (pos !== s.length) return false;
+  return Object.entries(lang.min || {}).every(([v, m]) => (counts[v] ?? 0) >= m);
+}
 
-  if (w.length < p) {
-    return { valid: false, reason: `Chosen string w ("${w}") must have length |w| ≥ p (${p}).` };
+type Exponent = { coef: number; constant: number };
+type TemplateItem = { atom: string | TemplateItem[]; exp: Exponent };
+
+// Parses strings such as "a^p b^{2p+1} (ab)^3 c" into a template over p
+export function parseStringTemplate(template: string, alphabet: string[]): TemplateItem[] {
+  const src = template.replace(/\s+/g, '');
+  let pos = 0;
+
+  const parseExponent = (): Exponent => {
+    const braced = src[pos] === '{';
+    if (braced) pos++;
+    const match = /^(\d*)(p?)(?:([+-])(\d+))?/.exec(src.slice(pos));
+    if (!match || match[0] === '') throw new Error(`Expected an exponent after '^' at position ${pos}.`);
+    pos += match[0].length;
+    if (braced) {
+      if (src[pos] !== '}') throw new Error("Missing '}' in exponent.");
+      pos++;
+    }
+    const hasP = match[2] === 'p';
+    const lead = match[1] === '' ? (hasP ? 1 : 0) : Number(match[1]);
+    const tail = match[4] ? Number(match[4]) * (match[3] === '-' ? -1 : 1) : 0;
+    return hasP ? { coef: lead, constant: tail } : { coef: 0, constant: lead + tail };
+  };
+
+  const parseSeq = (): TemplateItem[] => {
+    const items: TemplateItem[] = [];
+    while (pos < src.length && src[pos] !== ')') {
+      let atom: string | TemplateItem[];
+      if (src[pos] === '(') {
+        pos++;
+        atom = parseSeq();
+        if (src[pos] !== ')') throw new Error("Missing ')'.");
+        pos++;
+      } else if (alphabet.includes(src[pos])) {
+        atom = src[pos++];
+      } else {
+        throw new Error(`'${src[pos]}' is not in the alphabet {${alphabet.join(', ')}}.`);
+      }
+      let exp: Exponent = { coef: 0, constant: 1 };
+      if (src[pos] === '^') {
+        pos++;
+        exp = parseExponent();
+      }
+      items.push({ atom, exp });
+    }
+    return items;
+  };
+
+  const items = parseSeq();
+  if (pos !== src.length) throw new Error("Unexpected ')'.");
+  return items;
+}
+
+export function expandTemplate(items: TemplateItem[], p: number): string {
+  return items
+    .map(({ atom, exp }) => {
+      const n = exp.coef * p + exp.constant;
+      if (n < 0) throw new Error(`An exponent is negative when p = ${p}.`);
+      return (typeof atom === 'string' ? atom : expandTemplate(atom, p)).repeat(n);
+    })
+    .join('');
+}
+
+const PUMPING_LENGTHS = [1, 2, 3, 4, 5, 6, 7];
+const PUMP_EXPONENTS = [0, 2, 3];
+
+export function verifyPumpingLemma(
+  proof: PumpingLemmaSubmission,
+  inLanguage: (s: string) => boolean,
+  alphabet: string[]
+): { valid: boolean; reason: string } {
+  if (!proof.w.trim()) return { valid: false, reason: 'Enter a string w written in terms of p.' };
+
+  let template: TemplateItem[];
+  try {
+    template = parseStringTemplate(proof.w, alphabet);
+  } catch (e) {
+    return { valid: false, reason: e instanceof Error ? e.message : String(e) };
   }
 
-  if (u + v + x + y + z !== w) {
-    return { valid: false, reason: `Decomposition u+v+x+y+z ("${u+v+x+y+z}") does not equal w ("${w}").` };
-  }
+  for (const p of PUMPING_LENGTHS) {
+    let w: string;
+    try {
+      w = expandTemplate(template, p);
+    } catch (e) {
+      return { valid: false, reason: e instanceof Error ? e.message : String(e) };
+    }
+    if (w.length < p) {
+      return { valid: false, reason: `For p = ${p}, w = "${w}" is shorter than p. w must grow with p.` };
+    }
+    if (!inLanguage(w)) {
+      return { valid: false, reason: `For p = ${p}, w = "${w}" is not in L.` };
+    }
 
-  if (v.length + y.length < 1) {
-    return { valid: false, reason: '|vy| must be ≥ 1 (pumping parts cannot both be empty).' };
-  }
-
-  if ((v + x + y).length > p) {
-    return { valid: false, reason: `|vxy| (${(v + x + y).length}) must be ≤ p (${p}).` };
-  }
-
-  const pumpedString = u + v.repeat(i) + x + y.repeat(i) + z;
-  const matchCase = testCases.find((tc) => tc.input === pumpedString);
-
-  if (matchCase && matchCase.expected === false) {
-    return { valid: true, reason: `Success! Pumped string "${pumpedString}" (i=${i}) is NOT in language L.` };
+    // Adversary: look for a split that stays in L for every tested i
+    for (let start = 0; start < w.length; start++) {
+      for (let vxyLen = 1; vxyLen <= Math.min(p, w.length - start); vxyLen++) {
+        for (let vLen = 0; vLen <= vxyLen; vLen++) {
+          for (let yLen = 0; vLen + yLen <= vxyLen; yLen++) {
+            if (vLen + yLen === 0) continue;
+            const u = w.slice(0, start);
+            const v = w.slice(start, start + vLen);
+            const x = w.slice(start + vLen, start + vxyLen - yLen);
+            const y = w.slice(start + vxyLen - yLen, start + vxyLen);
+            const z = w.slice(start + vxyLen);
+            const escapes = PUMP_EXPONENTS.some((i) => !inLanguage(u + v.repeat(i) + x + y.repeat(i) + z));
+            if (!escapes) {
+              const show = (s: string) => (s === '' ? 'ε' : s);
+              return {
+                valid: false,
+                reason: `For p = ${p}, w = "${w}": the adversary splits u="${show(u)}", v="${show(v)}", x="${show(x)}", y="${show(y)}", z="${show(z)}", and uvⁱxyⁱz stays in L for i = ${PUMP_EXPONENTS.join(', ')}.`,
+              };
+            }
+          }
+        }
+      }
+    }
   }
 
   return {
     valid: true,
-    reason: `Pumped string u v^${i} x y^${i} z = "${pumpedString}". Verify if this violates language rules.`,
+    reason: `Proof checked for p = ${PUMPING_LENGTHS[0]}…${PUMPING_LENGTHS[PUMPING_LENGTHS.length - 1]}: every split of w can be pumped out of L.`,
   };
 }
 
 // ---------------------------------------------------------------------------
-// 5. Universal Evaluator Endpoint
+// 5. Regular expressions (formal syntax: + or | for union, * for star, ε for empty)
+// ---------------------------------------------------------------------------
+export function compileFormalRegex(regex: string, alphabet: string[]): RegExp {
+  const cleaned = regex.replace(/\s+/g, '');
+  for (const ch of cleaned) {
+    if (!alphabet.includes(ch) && !'()+|*ε'.includes(ch)) {
+      throw new Error(`Unexpected symbol '${ch}' in regular expression.`);
+    }
+  }
+  const escape = (ch: string) => ch.replace(/[.?^${}[\]\\/]/g, '\\$&');
+  const body = cleaned
+    .split('')
+    .map((ch) => (ch === '+' ? '|' : ch === 'ε' ? '' : alphabet.includes(ch) ? escape(ch) : ch))
+    .join('');
+  return new RegExp(`^(?:${body})$`);
+}
+
+export function grammarSpecToCFG(spec: GrammarSpec): CFG {
+  return {
+    variables: spec.variables,
+    terminals: spec.terminals,
+    startSymbol: spec.startVariable,
+    rules: Object.entries(spec.productions).map(([lhs, rhs]) => ({ lhs, rhs })),
+  };
+}
+
+// The language the student's answer must match, taken from the problem definition
+export function referenceLanguage(problem: Problem): ((s: string) => boolean) | null {
+  if (problem.answerDFA) {
+    const dfa = problem.answerDFA;
+    return (s) => runDFA(dfa, s);
+  }
+  const spec = problem.answerCFG ?? problem.givenCFG;
+  if (spec) {
+    const cfg = grammarSpecToCFG(spec);
+    return (s) => runCFG(cfg, s);
+  }
+  if (problem.language) {
+    const lang = problem.language;
+    return (s) => inBlockLanguage(lang, s);
+  }
+  return null;
+}
+
+// All strings over the alphabet, shortest first, capped at roughly `budget` strings
+function enumerateStrings(alphabet: string[], budget: number): { strings: string[]; maxLength: number } {
+  const strings = [''];
+  let layer = [''];
+  let maxLength = 0;
+  while (alphabet.length > 0 && strings.length + layer.length * alphabet.length <= budget) {
+    layer = layer.flatMap((s) => alphabet.map((a) => s + a));
+    strings.push(...layer);
+    maxLength++;
+  }
+  return { strings, maxLength };
+}
+
+// ---------------------------------------------------------------------------
+// 6. Universal Evaluator Endpoint
 // ---------------------------------------------------------------------------
 export function evaluateSolution(
   studentInput: {
@@ -246,103 +481,118 @@ export function evaluateSolution(
     ambiguity?: AmbiguityProof;
     parseTree?: { tree: ParseTreeNode; target: string };
   },
-  answerDFA: DFA,
-  testCases: TestCase[],
-  problemType?: string
+  problem: Problem
 ): VerificationResult {
+  const reference = referenceLanguage(problem);
+  const proofResult = (res: { valid: boolean; reason: string }): VerificationResult => ({
+    passed: res.valid,
+    score: res.valid ? 1.0 : 0.0,
+    counterexample: null,
+    testResults: [],
+    feedback: res.reason,
+  });
+
   // A. Pumping Lemma Proof Evaluation
   if (studentInput.pumping) {
-    const res = verifyPumpingLemma(studentInput.pumping, testCases);
-    return {
-      passed: res.valid,
-      score: res.valid ? 1.0 : 0.0,
-      counterexample: null,
-      testResults: [],
-      feedback: res.reason,
-    };
+    if (!reference) return proofResult({ valid: false, reason: 'This problem does not define its language.' });
+    return proofResult(verifyPumpingLemma(studentInput.pumping, reference, problem.alphabet));
   }
 
   // B. Ambiguity Proof Evaluation
   if (studentInput.ambiguity && studentInput.cfg) {
-    const res = verifyAmbiguityProof(studentInput.ambiguity, studentInput.cfg);
-    return {
-      passed: res.valid,
-      score: res.valid ? 1.0 : 0.0,
-      counterexample: null,
-      testResults: [],
-      feedback: res.reason,
-    };
+    return proofResult(verifyAmbiguityProof(studentInput.ambiguity, studentInput.cfg));
   }
 
   // C. Parse Tree Evaluation
   if (studentInput.parseTree && studentInput.cfg) {
-    const res = verifyParseTree(studentInput.parseTree.tree, studentInput.cfg, studentInput.parseTree.target);
-    return {
-      passed: res.valid,
-      score: res.valid ? 1.0 : 0.0,
-      counterexample: null,
-      testResults: [],
-      feedback: res.reason,
-    };
+    return proofResult(verifyParseTree(studentInput.parseTree.tree, studentInput.cfg, studentInput.parseTree.target));
   }
 
   // D. CFG Normal Forms Checks (CNF / GNF)
   if (studentInput.cfg) {
-    if (problemType === 'cfg-to-cnf') {
+    if (studentInput.cfg.rules.length === 0) {
+      return proofResult({ valid: false, reason: 'Enter at least one production rule.' });
+    }
+    if (problem.type === 'cfg-to-cnf') {
       const cnfCheck = checkChomskyNormalForm(studentInput.cfg);
-      if (!cnfCheck.valid) {
-        return {
-          passed: false,
-          score: 0.0,
-          counterexample: null,
-          testResults: [],
-          feedback: `Chomsky Normal Form Violation: ${cnfCheck.reason}`,
-        };
-      }
-    } else if (problemType === 'cfg-to-gnf') {
+      if (!cnfCheck.valid) return proofResult({ valid: false, reason: `Chomsky Normal Form Violation: ${cnfCheck.reason}` });
+    } else if (problem.type === 'cfg-to-gnf') {
       const gnfCheck = checkGreibachNormalForm(studentInput.cfg);
-      if (!gnfCheck.valid) {
-        return {
-          passed: false,
-          score: 0.0,
-          counterexample: null,
-          testResults: [],
-          feedback: `Greibach Normal Form Violation: ${gnfCheck.reason}`,
-        };
-      }
+      if (!gnfCheck.valid) return proofResult({ valid: false, reason: `Greibach Normal Form Violation: ${gnfCheck.reason}` });
     }
   }
 
-  // E. Automata Simulation across Test Cases (PDA / CFG / DFA / NFA)
-  const testResults = testCases.map((tc) => {
-    let actual = false;
-    if (studentInput.pda) {
-      actual = runPDA(studentInput.pda, tc.input);
-    } else if (studentInput.cfg) {
-      actual = runCYK(studentInput.cfg, tc.input);
-    } else if (studentInput.dfa) {
-      actual = runDFA(studentInput.dfa, tc.input);
+  let accepts: (s: string) => boolean;
+  if (studentInput.pda) {
+    const pda = studentInput.pda;
+    accepts = (s) => runPDA(pda, s);
+  } else if (studentInput.cfg) {
+    const cfg = studentInput.cfg;
+    accepts = (s) => runCFG(cfg, s);
+  } else if (studentInput.dfa) {
+    const dfa = studentInput.dfa;
+    accepts = (s) => runDFA(dfa, s);
+  } else if (studentInput.regex !== undefined) {
+    if (!studentInput.regex.trim()) return proofResult({ valid: false, reason: 'Enter a regular expression.' });
+    try {
+      const regex = compileFormalRegex(studentInput.regex, problem.alphabet);
+      accepts = (s) => regex.test(s);
+    } catch (e) {
+      return proofResult({ valid: false, reason: `Invalid regular expression: ${e instanceof Error ? e.message : String(e)}` });
+    }
+  } else {
+    return proofResult({ valid: false, reason: 'Nothing to check yet.' });
+  }
+
+  // E. Test Cases
+  const show = (s: string) => (s === '' ? 'ε (empty string)' : s);
+  const testResults = problem.testCases.map((tc) => {
+    const actual = accepts(tc.input);
+    return { input: show(tc.input), expected: tc.expected, actual, passed: actual === tc.expected };
+  });
+  const totalPassed = testResults.filter((r) => r.passed).length;
+  const failedCase = testResults.find((r) => !r.passed);
+
+  if (failedCase) {
+    return {
+      passed: false,
+      score: Number((totalPassed / Math.max(1, testResults.length)).toFixed(2)),
+      counterexample: failedCase.input,
+      testResults,
+      feedback: `Partial Credit: ${totalPassed}/${testResults.length} test cases passed.`,
+    };
+  }
+
+  // F. Exhaustive comparison against the reference language on all short strings
+  if (reference) {
+    const budget = studentInput.pda ? 300 : 2000;
+    const { strings, maxLength } = enumerateStrings(problem.alphabet, budget);
+    const mismatch = strings.find((s) => accepts(s) !== reference(s));
+    if (mismatch !== undefined) {
+      const shouldAccept = reference(mismatch);
+      return {
+        passed: false,
+        score: 0.9,
+        counterexample: show(mismatch),
+        testResults,
+        feedback: `All test cases pass, but your answer ${shouldAccept ? 'rejects' : 'accepts'} "${show(mismatch)}", which should be ${shouldAccept ? 'accepted' : 'rejected'}.`,
+      };
     }
     return {
-      input: tc.input === '' ? 'ε (empty string)' : tc.input,
-      expected: tc.expected,
-      actual,
-      passed: actual === tc.expected,
+      passed: true,
+      score: 1.0,
+      counterexample: null,
+      testResults,
+      feedback: `Full Credit: all test cases pass and your answer matches the target language on every string up to length ${maxLength} (${strings.length} strings).`,
     };
-  });
-
-  const totalPassed = testResults.filter((r) => r.passed).length;
-  const isEquivalent = totalPassed === testCases.length;
-  const score = isEquivalent ? 1.0 : Number((totalPassed / Math.max(1, testCases.length)).toFixed(2));
+  }
 
   return {
-    passed: isEquivalent,
-    score,
-    counterexample: testResults.find((r) => !r.passed)?.input || null,
+    passed: true,
+    score: 1.0,
+    counterexample: null,
     testResults,
-    feedback: isEquivalent
-      ? 'Full Credit: All test cases passed successfully.'
-      : `Partial Credit: ${totalPassed}/${testCases.length} test cases passed.`,
+    feedback: 'Full Credit: All test cases passed successfully.',
   };
 }
 
@@ -350,56 +600,75 @@ export function evaluateSolution(
 export function runDFA(dfa: DFA, input: string): boolean {
   let currentState = dfa.initialState;
   for (const symbol of input) {
-    if (!dfa.alphabet.includes(symbol)) return false;
-    currentState = dfa.transitions[currentState]?.[symbol];
+    if (!(dfa.alphabet || []).includes(symbol)) return false;
+    currentState = dfa.transitions?.[currentState]?.[symbol];
     if (!currentState) return false;
   }
-  return dfa.acceptStates.includes(currentState);
+  return (dfa.acceptStates || []).includes(currentState);
 }
 
-export function runCYK(cfg: CFG, input: string): boolean {
+// General CFG membership (Earley parser with Aycock–Horspool nullable handling),
+// so grammars do not need to be in CNF. Symbols are single characters.
+export function runCFG(cfg: CFG, input: string): boolean {
   const cleanInput = input === 'ε' || input === 'e' ? '' : input;
-  const variables = cfg.variables || [];
   const startSymbol = cfg.startSymbol || 'S';
+  const isVar = (s: string) => cfg.variables.includes(s);
+  const prods = cfg.rules.flatMap((r) => r.rhs.map((p) => ({ lhs: r.lhs, rhs: normalizeForm(p).split('') })));
 
-  if (cleanInput === '') {
-    return cfg.rules.some((r) => r.lhs === startSymbol && r.rhs.some((p) => p === '' || p === 'ε'));
-  }
-
-  const n = cleanInput.length;
-  const P: boolean[][][] = Array.from({ length: n + 1 }, () =>
-    Array.from({ length: n + 1 }, () => Array(variables.length).fill(false))
-  );
-
-  for (let i = 1; i <= n; i++) {
-    const char = cleanInput[i - 1];
-    cfg.rules.forEach((rule) => {
-      if (rule.rhs.includes(char)) {
-        const vIdx = variables.indexOf(rule.lhs);
-        if (vIdx !== -1) P[1][i][vIdx] = true;
-      }
-    });
-  }
-
-  for (let l = 2; l <= n; l++) {
-    for (let s = 1; s <= n - l + 1; s++) {
-      for (let p = 1; p <= l - 1; p++) {
-        cfg.rules.forEach((rule) => {
-          const vA = variables.indexOf(rule.lhs);
-          rule.rhs.forEach((prod) => {
-            if (prod.length === 2) {
-              const vB = variables.indexOf(prod[0]);
-              const vC = variables.indexOf(prod[1]);
-              if (vB !== -1 && vC !== -1 && P[p][s][vB] && P[l - p][s + p][vC]) {
-                P[l][s][vA] = true;
-              }
-            }
-          });
-        });
+  const nullable = new Set<string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const pr of prods) {
+      if (!nullable.has(pr.lhs) && pr.rhs.every((s) => nullable.has(s))) {
+        nullable.add(pr.lhs);
+        changed = true;
       }
     }
   }
 
-  const startIdx = variables.indexOf(startSymbol);
-  return startIdx !== -1 ? P[n][1][startIdx] : false;
+  type Item = { prod: number; dot: number; origin: number };
+  const n = cleanInput.length;
+  const sets: Item[][] = Array.from({ length: n + 1 }, () => []);
+  const seen: Set<string>[] = Array.from({ length: n + 1 }, () => new Set());
+  const add = (i: number, item: Item) => {
+    const key = `${item.prod}:${item.dot}:${item.origin}`;
+    if (!seen[i].has(key)) {
+      seen[i].add(key);
+      sets[i].push(item);
+    }
+  };
+
+  prods.forEach((pr, idx) => {
+    if (pr.lhs === startSymbol) add(0, { prod: idx, dot: 0, origin: 0 });
+  });
+
+  for (let i = 0; i <= n; i++) {
+    for (let k = 0; k < sets[i].length; k++) {
+      const item = sets[i][k];
+      const { rhs, lhs } = prods[item.prod];
+      if (item.dot < rhs.length) {
+        const sym = rhs[item.dot];
+        if (isVar(sym)) {
+          prods.forEach((pr, idx) => {
+            if (pr.lhs === sym) add(i, { prod: idx, dot: 0, origin: i });
+          });
+          if (nullable.has(sym)) add(i, { ...item, dot: item.dot + 1 });
+        } else if (i < n && cleanInput[i] === sym) {
+          add(i + 1, { ...item, dot: item.dot + 1 });
+        }
+      } else {
+        for (const parent of sets[item.origin]) {
+          const pr = prods[parent.prod].rhs;
+          if (parent.dot < pr.length && pr[parent.dot] === lhs) {
+            add(i, { ...parent, dot: parent.dot + 1 });
+          }
+        }
+      }
+    }
+  }
+
+  return sets[n].some(
+    (item) => item.origin === 0 && prods[item.prod].lhs === startSymbol && item.dot === prods[item.prod].rhs.length
+  );
 }

@@ -1,5 +1,5 @@
 {
-  "id": "odd-ones",
+  "id": "odd-1s",
   "type": "dfa-design",
   "title": "DFA: Odd Number of 1s",
   "description": "Construct a DFA over alphabet {0, 1} that accepts strings containing an odd number of \"1\"s.",

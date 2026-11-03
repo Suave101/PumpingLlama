@@ -2,8 +2,18 @@
   "id": "parse-tree-simple",
   "type": "parse-trees",
   "title": "Construct a Valid Parse Tree",
-  "description": "Construct a valid JSON parse tree for the target string 'ab' given the grammar S -> A B, A -> a, B -> b.",
+  "description": "Construct a valid parse tree for the target string 'ab' using the given grammar.",
   "alphabet": ["a", "b"],
+  "givenCFG": {
+    "variables": ["S", "A", "B"],
+    "terminals": ["a", "b"],
+    "startVariable": "S",
+    "productions": {
+      "S": ["AB"],
+      "A": ["a"],
+      "B": ["b"]
+    }
+  },
   "testCases": [
     { "input": "ab", "expected": true }
   ]

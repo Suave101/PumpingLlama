@@ -1,5 +1,5 @@
 {
-  "id": "even-0s-even-1s",
+  "id": "even-0s-even1s",
   "type": "dfa-design",
   "title": "DFA: Even Number of 0s and Even Number of 1s",
   "description": "Construct a DFA over alphabet {0, 1} that accepts strings containing both an even number of \"0\"s and an even number of \"1\"s.",
