@@ -227,7 +227,7 @@ export default function ProblemWorkspace({ problem }: { problem: Problem }) {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-8 font-sans">
+    <main className="min-h-screen bg-steel-950 text-steel-100 p-8 font-sans">
       <div className="max-w-7xl mx-auto flex flex-col gap-6">
         <WorkspaceHeader problem={problem} />
 
@@ -266,7 +266,7 @@ export default function ProblemWorkspace({ problem }: { problem: Problem }) {
 
             <button
               onClick={handleVerify}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-lg transition shadow-lg"
+              className="w-full bg-crimson-600 hover:bg-crimson-500 text-white font-medium py-3 rounded-lg transition shadow-lg"
             >
               Verify Solution & Run Evaluator
             </button>

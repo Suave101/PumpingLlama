@@ -1,164 +1,230 @@
-import fs from 'fs';
-import path from 'path';
 import Link from 'next/link';
-import { Problem } from '@/types/automata';
+import { CATEGORY_ORDER, getCategoryMeta, groupByCategory, loadProblems } from '@/lib/problems';
+import { SiteNav } from '@/components/site/SiteNav';
+import { LogoMark } from '@/components/site/Logo';
 
-const CATEGORY_META: Record<string, { title: string; description: string; icon: string }> = {
-  DFA: {
-    title: 'Deterministic Finite Automata',
-    description: 'Construct state machines with deterministic transitions for regular languages.',
-    icon: '⚡',
+const STEPS = [
+  {
+    title: 'Pick a problem',
+    body: 'DFAs, regular expressions, grammars, pushdown automata, parse trees and pumping lemma proofs.',
   },
-  NFA: {
-    title: 'Nondeterministic Finite Automata',
-    description: 'Design non-deterministic state models featuring non-deterministic branches & ε-transitions.',
-    icon: '🔀',
+  {
+    title: 'Build your answer',
+    body: 'Drag states onto a canvas, write production rules, grow a parse tree, or pick a string to pump.',
   },
-  REGEX: {
-    title: 'Regular Expressions',
-    description: 'Write patterns using union, concatenation, and Kleene star operators.',
-    icon: '🔍',
+  {
+    title: 'Get a counterexample',
+    body: 'Your answer is compared with the target language, and you see the exact string where they disagree.',
   },
-  CFG: {
-    title: 'Context-Free Grammars',
-    description: 'Define production rules for context-free languages and non-regular structures.',
-    icon: '🌳',
-  },
-  PDA: {
-    title: 'Pushdown Automata',
-    description: 'Build non-deterministic stack machines to accept context-free languages.',
-    icon: '🥞',
-  },
-  NORMAL_FORMS: {
-    title: 'Grammar Normal Forms (CNF / GNF)',
-    description: 'Transform context-free grammars into Chomsky and Greibach Normal Forms.',
-    icon: '📐',
-  },
-  PROOFS: {
-    title: 'Pumping Lemma Proofs',
-    description: 'Prove languages are non-regular or non-context-free through adversarial pumping length games.',
-    icon: '🪀',
-  },
-  PARSING: {
-    title: 'Parse Trees & Ambiguity',
-    description: 'Construct syntax trees and prove grammar ambiguity using leftmost derivations.',
-    icon: '🌿',
-  },
-};
+];
 
-function resolveCategoryKey(type: string): string {
-  const upper = type.toUpperCase();
-  if (upper.includes('PDA')) return 'PDA';
-  if (upper.includes('CNF') || upper.includes('GNF')) return 'NORMAL_FORMS';
-  if (upper.includes('PUMPING')) return 'PROOFS';
-  if (upper.includes('AMBIGUITY') || upper.includes('PARSE')) return 'PARSING';
-  if (upper.includes('REGEX')) return 'REGEX';
-  if (upper.includes('NFA')) return 'NFA';
-  if (upper.includes('DFA')) return 'DFA';
-  if (upper.includes('CFG')) return 'CFG';
-  return upper;
+// Two-state DFA for "odd number of 1s", drawn as the hero illustration
+function HeroAutomaton() {
+  return (
+    <div className="relative bg-steel-900/90 border border-steel-700 rounded-2xl p-5 shadow-[0_0_80px_-20px] shadow-arc-500/50">
+      {/* HUD corner brackets */}
+      <span aria-hidden="true" className="absolute -top-px -left-px w-5 h-5 border-t-2 border-l-2 border-gold-400 rounded-tl-2xl" />
+      <span aria-hidden="true" className="absolute -top-px -right-px w-5 h-5 border-t-2 border-r-2 border-gold-400 rounded-tr-2xl" />
+      <span aria-hidden="true" className="absolute -bottom-px -left-px w-5 h-5 border-b-2 border-l-2 border-gold-400 rounded-bl-2xl" />
+      <span aria-hidden="true" className="absolute -bottom-px -right-px w-5 h-5 border-b-2 border-r-2 border-gold-400 rounded-br-2xl" />
+      <div className="flex items-center justify-between text-[11px] font-mono text-steel-400 mb-2">
+        <span>DFA: odd number of 1s</span>
+        <span>Σ = &#123;0, 1&#125;</span>
+      </div>
+      <svg viewBox="0 0 360 190" className="w-full h-auto" role="img" aria-label="A two-state DFA that accepts strings with an odd number of 1s">
+        <defs>
+          <marker id="hero-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#e0a21b" />
+          </marker>
+          <marker id="hero-start" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#4fe3ea" />
+          </marker>
+        </defs>
+
+        {/* start arrow */}
+        <path d="M 30 105 L 72 105" stroke="#4fe3ea" strokeWidth="2.5" markerEnd="url(#hero-start)" />
+
+        {/* q0 -> q1 and back on 1 */}
+        <path d="M 120 88 Q 180 40 240 88" fill="none" stroke="#e0a21b" strokeWidth="2" markerEnd="url(#hero-arrow)" />
+        <text x="180" y="52" textAnchor="middle" fill="#f0b72f" fontSize="13" fontWeight="bold" fontFamily="monospace">1</text>
+        <path d="M 240 122 Q 180 170 120 122" fill="none" stroke="#e0a21b" strokeWidth="2" markerEnd="url(#hero-arrow)" />
+        <text x="180" y="168" textAnchor="middle" fill="#f0b72f" fontSize="13" fontWeight="bold" fontFamily="monospace">1</text>
+
+        {/* self-loops on 0 */}
+        <path d="M 88 80 A 18 18 0 1 1 112 80" fill="none" stroke="#e0a21b" strokeWidth="2" markerEnd="url(#hero-arrow)" />
+        <text x="100" y="34" textAnchor="middle" fill="#f0b72f" fontSize="13" fontWeight="bold" fontFamily="monospace">0</text>
+        <path d="M 248 80 A 18 18 0 1 1 272 80" fill="none" stroke="#e0a21b" strokeWidth="2" markerEnd="url(#hero-arrow)" />
+        <text x="260" y="34" textAnchor="middle" fill="#f0b72f" fontSize="13" fontWeight="bold" fontFamily="monospace">0</text>
+
+        {/* states */}
+        <circle cx="100" cy="105" r="24" fill="#1a1c21" stroke="#4fe3ea" strokeWidth="2" />
+        <text x="100" y="110" textAnchor="middle" fill="#f6f6f7" fontSize="14" fontWeight="bold" fontFamily="monospace">q0</text>
+        <circle cx="260" cy="105" r="29" fill="none" stroke="#c08414" strokeWidth="2" />
+        <circle cx="260" cy="105" r="24" fill="#4a3210" stroke="#f0b72f" strokeWidth="2" />
+        <text x="260" y="110" textAnchor="middle" fill="#f6f6f7" fontSize="14" fontWeight="bold" fontFamily="monospace">q1</text>
+      </svg>
+
+      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+        <div className="px-3 py-2 rounded-lg border bg-gold-950/40 border-gold-900/60 text-gold-300 flex justify-between font-mono">
+          <span>&quot;0100&quot;</span>
+          <span>✓ accepted</span>
+        </div>
+        <div className="px-3 py-2 rounded-lg border bg-red-950/30 border-red-900/50 text-red-300 flex justify-between font-mono">
+          <span>&quot;0110&quot;</span>
+          <span>✗ rejected</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-export default async function HomePage() {
-  const problemsDir = path.join(process.cwd(), 'public/problems');
-  let problemList: { slug: string; problem: Problem }[] = [];
-
-  if (fs.existsSync(problemsDir)) {
-    const files = fs.readdirSync(problemsDir).filter((f) => f.endsWith('.json'));
-    problemList = files.map((file) => {
-      const content = fs.readFileSync(path.join(problemsDir, file), 'utf-8');
-      return {
-        slug: file.replace(/\.json$/, ''),
-        problem: JSON.parse(content) as Problem,
-      };
-    });
-  }
-
-  const groupedProblems = problemList.reduce((acc, item) => {
-    const key = resolveCategoryKey(item.problem.type || 'OTHER');
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item);
-    return acc;
-  }, {} as Record<string, typeof problemList>);
-
-  const categoryKeys = Object.keys(groupedProblems).sort();
+export default function HomePage() {
+  const problems = loadProblems();
+  const groups = groupByCategory(problems);
+  const topics = groups.filter((g) => CATEGORY_ORDER.includes(g.key));
+  const starter = problems.find((p) => p.slug === 'odd-1s') ?? groups[0]?.items[0];
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-8 font-sans">
-      <div className="max-w-6xl mx-auto flex flex-col gap-8">
-        <header className="border-b border-slate-800 pb-6 flex justify-between items-end">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-3xl">🦙</span>
-              <h1 className="text-4xl font-extrabold text-white tracking-tight">Pumping Llama</h1>
-            </div>
-            <p className="text-slate-400 mt-2 text-sm max-w-xl">
-              Automated formal languages and automata theory practice platform with instant counter-example feedback.
-            </p>
+    <main className="relative isolate min-h-screen bg-steel-950 text-steel-100 px-4 sm:px-8 font-sans overflow-hidden">
+      {/* Backdrop: crimson glow, arc-reactor glow and a faint HUD grid */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-[760px] -z-10"
+        style={{
+          backgroundImage: [
+            'radial-gradient(ellipse 60% 55% at 15% 0%, rgba(166, 25, 46, 0.35), transparent 70%)',
+            'radial-gradient(circle at 80% 35%, rgba(31, 200, 209, 0.14), transparent 40%)',
+            'linear-gradient(rgba(174, 179, 186, 0.06) 1px, transparent 1px)',
+            'linear-gradient(90deg, rgba(174, 179, 186, 0.06) 1px, transparent 1px)',
+          ].join(', '),
+          backgroundSize: 'auto, auto, 40px 40px, 40px 40px',
+          maskImage: 'linear-gradient(to bottom, black 60%, transparent)',
+        }}
+      />
+      <SiteNav current="home" />
+
+      {/* Hero */}
+      <section className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center pt-10 pb-20">
+        <div className="flex flex-col gap-6">
+          <span className="self-start text-xs font-semibold uppercase tracking-wider text-crimson-200 bg-crimson-950/70 border border-crimson-700/60 px-3 py-1 rounded-full">
+            Automata &amp; formal languages practice
+          </span>
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
+            Build the machine.
+            <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-300 via-gold-500 to-crimson-500">
+              See exactly where it breaks.
+            </span>
+          </h1>
+          <p className="text-steel-400 text-base sm:text-lg max-w-xl leading-relaxed">
+            Pumping Llama checks your DFAs, grammars, pushdown automata and proofs against the target language and
+            shows you a string that proves your answer wrong.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/problems"
+              className="px-5 py-3 rounded-lg bg-crimson-600 hover:bg-crimson-500 text-white font-semibold transition shadow-lg"
+            >
+              Browse {problems.length} problems
+            </Link>
+            {starter && (
+              <Link
+                href={`/problem/${starter.slug}`}
+                className="px-5 py-3 rounded-lg border border-steel-700 hover:border-gold-500/60 text-steel-200 hover:text-white font-semibold transition"
+              >
+                Try a starter problem &rarr;
+              </Link>
+            )}
           </div>
-        </header>
+          <dl className="flex gap-8 pt-2">
+            <div>
+              <dt className="text-xs text-steel-500">Problems</dt>
+              <dd className="text-2xl font-bold text-white font-mono">{problems.length}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-steel-500">Topics</dt>
+              <dd className="text-2xl font-bold text-white font-mono">{topics.length}</dd>
+            </div>
+          </dl>
+        </div>
+        <HeroAutomaton />
+      </section>
 
-        <div className="flex flex-col gap-10">
-          {categoryKeys.map((catKey) => {
-            const meta = CATEGORY_META[catKey] || {
-              title: `${catKey} Challenges`,
-              description: `Practice challenges under ${catKey}.`,
-              icon: '📌',
-            };
-            const items = groupedProblems[catKey];
+      {/* How it works */}
+      <section className="max-w-6xl mx-auto pb-20">
+        <h2 className="text-2xl font-bold text-white mb-6">How it works</h2>
+        <ol className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {STEPS.map((step, i) => (
+            <li key={step.title} className="bg-steel-900 border border-steel-800 rounded-xl p-5 flex flex-col gap-2">
+              <span className="w-8 h-8 rounded-full bg-crimson-950 border border-crimson-600/70 text-gold-300 font-mono font-bold flex items-center justify-center text-sm">
+                {i + 1}
+              </span>
+              <h3 className="text-base font-bold text-white">{step.title}</h3>
+              <p className="text-sm text-steel-400 leading-relaxed">{step.body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
 
+      {/* Topics */}
+      <section className="max-w-6xl mx-auto pb-20">
+        <div className="flex items-end justify-between gap-4 mb-6">
+          <h2 className="text-2xl font-bold text-white">Topics</h2>
+          <Link href="/problems" className="text-sm text-gold-400 hover:text-gold-300 font-medium">
+            All problems &rarr;
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {topics.map(({ key, items }) => {
+            const meta = getCategoryMeta(key);
             return (
-              <section key={catKey} className="flex flex-col gap-4">
-                <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{meta.icon}</span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold text-white">{meta.title}</h2>
-                        <span className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono">
-                          {items.length} {items.length === 1 ? 'problem' : 'problems'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-400 mt-0.5">{meta.description}</p>
-                    </div>
-                  </div>
+              <Link
+                key={key}
+                href={`/problems#${key}`}
+                className="bg-steel-900 border border-steel-800 hover:border-gold-500/50 rounded-xl p-5 flex flex-col gap-3 transition group"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl" aria-hidden="true">
+                    {meta.icon}
+                  </span>
+                  <span className="text-xs bg-steel-800 text-steel-300 px-2 py-0.5 rounded-full font-mono">
+                    {items.length}
+                  </span>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {items.map(({ slug, problem }) => (
-                    <Link
-                      key={slug}
-                      href={`/problem/${slug}`}
-                      className="bg-slate-900 border border-slate-800/90 hover:border-emerald-500/50 p-5 rounded-xl transition flex flex-col justify-between gap-3 group"
-                    >
-                      <div>
-                        <div className="flex justify-between items-start gap-2">
-                          <h3 className="text-base font-bold text-white group-hover:text-emerald-300 transition">
-                            {problem.title}
-                          </h3>
-                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800/50 px-2 py-0.5 rounded uppercase font-mono shrink-0">
-                            {problem.type}
-                          </span>
-                        </div>
-                        <p className="text-slate-400 text-xs mt-2 line-clamp-2 leading-relaxed">
-                          {problem.description}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-3 border-t border-slate-800/60 font-mono">
-                        <span>Σ = &#123;{problem.alphabet?.join(', ')}&#125;</span>
-                        <span className="text-emerald-400 font-sans font-medium group-hover:translate-x-1 transition-transform inline-block">
-                          Solve &rarr;
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </section>
+                <h3 className="text-sm font-bold text-white group-hover:text-gold-300 transition">{meta.title}</h3>
+                <p className="text-xs text-steel-400 leading-relaxed">{meta.description}</p>
+              </Link>
             );
           })}
         </div>
-      </div>
+      </section>
+
+      {/* Instructors */}
+      <section className="max-w-6xl mx-auto pb-16">
+        <div className="bg-gradient-to-br from-steel-900 via-steel-900 to-crimson-950 border border-crimson-900/60 rounded-2xl p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <h2 className="text-xl font-bold text-white">Teaching a course?</h2>
+            <p className="text-sm text-steel-400 mt-1 max-w-xl">
+              Write your own problems in the Professor Studio: define the answer, add test cases, and export a problem
+              file to drop into the site.
+            </p>
+          </div>
+          <Link
+            href="/admin/studio"
+            className="shrink-0 px-5 py-3 rounded-lg border border-gold-600/60 text-gold-300 hover:bg-gold-950/60 font-semibold transition"
+          >
+            Open Professor Studio
+          </Link>
+        </div>
+      </section>
+
+      <footer className="max-w-6xl mx-auto border-t border-steel-800 py-6 text-xs text-steel-500 flex justify-between">
+        <span className="flex items-center gap-2">
+          <LogoMark className="w-4 h-4" />
+          Pumping Llama
+        </span>
+        <span>Automata theory practice</span>
+      </footer>
     </main>
   );
 }

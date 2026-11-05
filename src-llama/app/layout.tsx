@@ -24,7 +24,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-steel-950">
+        {/* Crimson-and-gold trim across the top of every page */}
+        <div aria-hidden="true" className="h-1 shrink-0 bg-gradient-to-r from-crimson-700 via-gold-500 to-crimson-700" />
+        {children}
+      </body>
     </html>
   );
 }

@@ -154,17 +154,17 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
   const edgeMap = getTransitionsList();
 
   return (
-    <div className="flex flex-col gap-5 bg-slate-900 border border-slate-800 rounded-xl p-5">
+    <div className="flex flex-col gap-5 bg-steel-900 border border-steel-800 rounded-xl p-5">
       {/* Top Configuration Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-steel-950 p-3 rounded-lg border border-steel-800 text-xs">
         <div>
-          <label className="text-slate-400 block mb-1">Acceptance Mode:</label>
+          <label className="text-steel-400 block mb-1">Acceptance Mode:</label>
           <select
             value={pda.acceptBy}
             onChange={(e) =>
               onChange({ ...pda, acceptBy: e.target.value as 'final-state' | 'empty-stack' })
             }
-            className="w-full bg-slate-900 border border-slate-700 text-emerald-300 rounded px-2 py-1 focus:outline-none"
+            className="w-full bg-steel-900 border border-steel-700 text-gold-300 rounded px-2 py-1 focus:outline-none"
           >
             <option value="final-state">Accept by Final State</option>
             <option value="empty-stack">Accept by Empty Stack</option>
@@ -172,17 +172,17 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
         </div>
 
         <div>
-          <label className="text-slate-400 block mb-1">Initial Stack Symbol:</label>
+          <label className="text-steel-400 block mb-1">Initial Stack Symbol:</label>
           <input
             type="text"
             value={pda.initialStackSymbol}
             onChange={(e) => onChange({ ...pda, initialStackSymbol: e.target.value })}
-            className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2 py-1 font-mono focus:outline-none"
+            className="w-full bg-steel-900 border border-steel-700 text-white rounded px-2 py-1 font-mono focus:outline-none"
           />
         </div>
 
         <div>
-          <label className="text-slate-400 block mb-1">Stack Alphabet (comma-separated):</label>
+          <label className="text-steel-400 block mb-1">Stack Alphabet (comma-separated):</label>
           <input
             type="text"
             value={pda.stackAlphabet.join(', ')}
@@ -192,35 +192,35 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
                 stackAlphabet: e.target.value.split(',').map((s) => s.trim()),
               })
             }
-            className="w-full bg-slate-900 border border-slate-700 text-white rounded px-2 py-1 font-mono focus:outline-none"
+            className="w-full bg-steel-900 border border-steel-700 text-white rounded px-2 py-1 font-mono focus:outline-none"
           />
         </div>
       </div>
 
       {/* State Actions Toolbar */}
-      <div className="flex justify-between items-center bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs">
+      <div className="flex justify-between items-center bg-steel-950 p-3 rounded-lg border border-steel-800 text-xs">
         <div className="flex items-center gap-2">
           <button
             onClick={addState}
-            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition"
+            className="px-3 py-1.5 bg-crimson-600 hover:bg-crimson-500 text-white font-medium rounded transition"
           >
             + Add State
           </button>
-          <span className="text-slate-400">
+          <span className="text-steel-400">
             States: <strong className="text-white font-mono">{pda.states.length}</strong>
           </span>
         </div>
 
         {selectedState && (
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 font-mono">Selected: {selectedState}</span>
+            <span className="text-steel-400 font-mono">Selected: {selectedState}</span>
             <button
               onClick={() => setInitialState(selectedState)}
               disabled={pda.initialState === selectedState}
               className={`px-2.5 py-1 rounded ${
                 pda.initialState === selectedState
-                  ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-slate-800 text-slate-300 hover:text-white'
+                  ? 'bg-steel-800 text-gold-400 border border-gold-500/30'
+                  : 'bg-steel-800 text-steel-300 hover:text-white'
               }`}
             >
               {pda.initialState === selectedState ? '✓ Start' : 'Set Start'}
@@ -230,8 +230,8 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
                 onClick={() => toggleAcceptState(selectedState)}
                 className={`px-2.5 py-1 rounded ${
                   pda.acceptStates.includes(selectedState)
-                    ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-500/50'
-                    : 'bg-slate-800 text-slate-300 hover:text-white'
+                    ? 'bg-gold-900/60 text-gold-300 border border-gold-500/50'
+                    : 'bg-steel-800 text-steel-300 hover:text-white'
                 }`}
               >
                 {pda.acceptStates.includes(selectedState) ? '✓ Accept' : 'Make Accept'}
@@ -250,7 +250,7 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
       </div>
 
       {/* Interactive Canvas Area */}
-      <div className="relative w-full h-[320px] bg-slate-950 border border-slate-800 rounded-lg overflow-hidden">
+      <div className="relative w-full h-[320px] bg-steel-950 border border-steel-800 rounded-lg overflow-hidden">
         <svg
           className="w-full h-full cursor-crosshair select-none"
           onMouseMove={handleMouseMove}
@@ -266,7 +266,7 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
               refY="3"
               orient="auto"
             >
-              <polygon points="0 0, 8 3, 0 6" fill="#10b981" />
+              <polygon points="0 0, 8 3, 0 6" fill="#e0a21b" />
             </marker>
           </defs>
 
@@ -285,14 +285,14 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
                       posFrom.y - 20
                     }`}
                     fill="none"
-                    stroke="#10b981"
+                    stroke="#e0a21b"
                     strokeWidth="2"
                     markerEnd="url(#pda-arrowhead)"
                   />
                   <text
                     x={posFrom.x}
                     y={posFrom.y - 50}
-                    fill="#34d399"
+                    fill="#f0b72f"
                     fontSize="10"
                     textAnchor="middle"
                     className="font-mono font-semibold"
@@ -324,14 +324,14 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
                 <path
                   d={pathD}
                   fill="none"
-                  stroke="#10b981"
+                  stroke="#e0a21b"
                   strokeWidth="2"
                   markerEnd="url(#pda-arrowhead)"
                 />
                 <text
                   x={midX}
                   y={midY - 6}
-                  fill="#34d399"
+                  fill="#f0b72f"
                   fontSize="10"
                   textAnchor="middle"
                   className="font-mono font-semibold"
@@ -361,7 +361,7 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
                   <path
                     d="M -45 0 L -22 0"
                     fill="none"
-                    stroke="#38bdf8"
+                    stroke="#4fe3ea"
                     strokeWidth="2.5"
                     markerEnd="url(#pda-arrowhead)"
                   />
@@ -372,7 +372,7 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
                   <circle
                     r="24"
                     fill="none"
-                    stroke={isSelected ? '#10b981' : '#059669'}
+                    stroke={isSelected ? '#e0a21b' : '#c08414'}
                     strokeWidth="2"
                   />
                 )}
@@ -380,14 +380,14 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
                 {/* Node Body */}
                 <circle
                   r="20"
-                  fill={isSelected ? '#064e3b' : '#0f172a'}
-                  stroke={isSelected ? '#34d399' : isInitial ? '#38bdf8' : '#475569'}
+                  fill={isSelected ? '#4a3210' : '#1a1c21'}
+                  stroke={isSelected ? '#f0b72f' : isInitial ? '#4fe3ea' : '#535962'}
                   strokeWidth={isSelected ? '3' : '2'}
                 />
 
                 {/* State Name */}
                 <text
-                  fill="#f8fafc"
+                  fill="#f6f6f7"
                   fontSize="12"
                   fontWeight="bold"
                   textAnchor="middle"
@@ -403,18 +403,18 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
       </div>
 
       {/* PDA Transition Creator & List */}
-      <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 flex flex-col gap-4">
-        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+      <div className="bg-steel-950 p-4 rounded-lg border border-steel-800 flex flex-col gap-4">
+        <h4 className="text-xs font-bold text-steel-300 uppercase tracking-wider">
           Add PDA Transition
         </h4>
 
         <form onSubmit={handleAddTransition} className="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs">
           <div>
-            <label className="text-slate-400 block mb-1">From State:</label>
+            <label className="text-steel-400 block mb-1">From State:</label>
             <select
               value={newTransFrom}
               onChange={(e) => setNewTransFrom(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1.5 font-mono"
+              className="w-full bg-steel-900 border border-steel-700 text-white rounded p-1.5 font-mono"
             >
               {pda.states.map((s) => (
                 <option key={s} value={s}>
@@ -425,44 +425,44 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
           </div>
 
           <div>
-            <label className="text-slate-400 block mb-1">Input (ε for empty):</label>
+            <label className="text-steel-400 block mb-1">Input (ε for empty):</label>
             <input
               type="text"
               placeholder="e.g. a or ε"
               value={newTransInput}
               onChange={(e) => setNewTransInput(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 text-emerald-300 rounded p-1.5 font-mono"
+              className="w-full bg-steel-900 border border-steel-700 text-gold-300 rounded p-1.5 font-mono"
             />
           </div>
 
           <div>
-            <label className="text-slate-400 block mb-1">Pop Symbol:</label>
+            <label className="text-steel-400 block mb-1">Pop Symbol:</label>
             <input
               type="text"
               placeholder="e.g. Z0 or ε"
               value={newTransPop}
               onChange={(e) => setNewTransPop(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 text-amber-300 rounded p-1.5 font-mono"
+              className="w-full bg-steel-900 border border-steel-700 text-arc-300 rounded p-1.5 font-mono"
             />
           </div>
 
           <div>
-            <label className="text-slate-400 block mb-1">Push Symbols:</label>
+            <label className="text-steel-400 block mb-1">Push Symbols:</label>
             <input
               type="text"
               placeholder="e.g. A Z0 or ε"
               value={newTransPush}
               onChange={(e) => setNewTransPush(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 text-cyan-300 rounded p-1.5 font-mono"
+              className="w-full bg-steel-900 border border-steel-700 text-cyan-300 rounded p-1.5 font-mono"
             />
           </div>
 
           <div>
-            <label className="text-slate-400 block mb-1">To State:</label>
+            <label className="text-steel-400 block mb-1">To State:</label>
             <select
               value={newTransTo}
               onChange={(e) => setNewTransTo(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 text-white rounded p-1.5 font-mono"
+              className="w-full bg-steel-900 border border-steel-700 text-white rounded p-1.5 font-mono"
             >
               {pda.states.map((s) => (
                 <option key={s} value={s}>
@@ -475,7 +475,7 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
           <div className="flex items-end">
             <button
               type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-1.5 rounded transition"
+              className="w-full bg-crimson-600 hover:bg-crimson-500 text-white font-medium py-1.5 rounded transition"
             >
               + Add Transition
             </button>
@@ -484,21 +484,21 @@ export const PdaCanvasEditor: React.FC<PdaCanvasEditorProps> = ({ pda, onChange 
 
         {/* Existing Transitions List */}
         <div className="mt-2">
-          <h5 className="text-xs text-slate-400 mb-2 font-semibold">Active Transitions:</h5>
+          <h5 className="text-xs text-steel-400 mb-2 font-semibold">Active Transitions:</h5>
           {pda.transitions.length === 0 ? (
-            <p className="text-xs text-slate-500 italic">No transitions defined yet.</p>
+            <p className="text-xs text-steel-500 italic">No transitions defined yet.</p>
           ) : (
             <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
               {pda.transitions.map((tr, idx) => (
                 <div
                   key={idx}
-                  className="flex justify-between items-center bg-slate-900 border border-slate-800 px-3 py-1.5 rounded text-xs font-mono"
+                  className="flex justify-between items-center bg-steel-900 border border-steel-800 px-3 py-1.5 rounded text-xs font-mono"
                 >
                   <div>
-                    <span className="text-emerald-400">{tr.from}</span>
-                    <span className="text-slate-500"> &rarr; </span>
-                    <span className="text-emerald-400">{tr.to}</span>
-                    <span className="text-slate-400 ml-3">
+                    <span className="text-gold-400">{tr.from}</span>
+                    <span className="text-steel-500"> &rarr; </span>
+                    <span className="text-gold-400">{tr.to}</span>
+                    <span className="text-steel-400 ml-3">
                       ({formatTransitionLabel(tr)})
                     </span>
                   </div>

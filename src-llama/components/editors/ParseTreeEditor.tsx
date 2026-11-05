@@ -161,7 +161,7 @@ export const ParseTreeEditor: React.FC<ParseTreeEditorProps> = ({
           y1={node.y}
           x2={child.x}
           y2={child.y}
-          stroke="#475569"
+          stroke="#535962"
           strokeWidth="2"
         />
       );
@@ -171,15 +171,15 @@ export const ParseTreeEditor: React.FC<ParseTreeEditorProps> = ({
     // Node Style
     const isEpsilon = node.node.symbol === 'ε';
     const bgFill = isEpsilon
-      ? '#581c87'
+      ? '#4d0d17'
       : isTerminal
-      ? '#064e3b'
-      : '#0f172a';
+      ? '#4a3210'
+      : '#1a1c21';
     const strokeColor = isEpsilon
-      ? '#c084fc'
+      ? '#df5468'
       : isTerminal
-      ? '#34d399'
-      : '#38bdf8';
+      ? '#f0b72f'
+      : '#4fe3ea';
 
     const isEditing = editingKey === path.join('.');
 
@@ -194,7 +194,7 @@ export const ParseTreeEditor: React.FC<ParseTreeEditorProps> = ({
         <circle
           r="18"
           fill={bgFill}
-          stroke={isEditing ? '#34d399' : strokeColor}
+          stroke={isEditing ? '#f0b72f' : strokeColor}
           strokeWidth="2"
           className="transition hover:scale-110"
         />
@@ -216,7 +216,7 @@ export const ParseTreeEditor: React.FC<ParseTreeEditorProps> = ({
           </foreignObject>
         ) : (
           <text
-            fill={node.node.symbol ? '#ffffff' : '#64748b'}
+            fill={node.node.symbol ? '#ffffff' : '#69707a'}
             fontSize="11"
             fontWeight="bold"
             textAnchor="middle"
@@ -229,17 +229,17 @@ export const ParseTreeEditor: React.FC<ParseTreeEditorProps> = ({
 
         {/* Quick Node Actions Overlay */}
         <foreignObject x="-35" y="20" width="70" height="30" className="opacity-0 group-hover:opacity-100 transition">
-          <div className="flex justify-center gap-1 bg-slate-900/90 border border-slate-700 rounded p-0.5 shadow">
+          <div className="flex justify-center gap-1 bg-steel-900/90 border border-steel-700 rounded p-0.5 shadow">
             <button
               onClick={() => startEditing(path, node.node.symbol)}
-              className="text-[10px] text-sky-400 hover:text-sky-300 font-bold px-1"
+              className="text-[10px] text-arc-400 hover:text-arc-300 font-bold px-1"
               title="Edit Symbol"
             >
               ✎
             </button>
             <button
               onClick={() => handleAddChild(path)}
-              className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold px-1"
+              className="text-[10px] text-gold-400 hover:text-gold-300 font-bold px-1"
               title="Add Child Node"
             >
               +
@@ -262,20 +262,20 @@ export const ParseTreeEditor: React.FC<ParseTreeEditorProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-4 bg-slate-900 border border-slate-800 rounded-xl p-5">
+    <div className="flex flex-col gap-4 bg-steel-900 border border-steel-800 rounded-xl p-5">
       {/* Header Controls */}
-      <div className="flex justify-between items-center bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs">
+      <div className="flex justify-between items-center bg-steel-950 p-3 rounded-lg border border-steel-800 text-xs">
         <div className="flex items-center gap-3">
-          <span className="text-slate-400 font-semibold uppercase tracking-wider">
+          <span className="text-steel-400 font-semibold uppercase tracking-wider">
             Parse Tree Builder
           </span>
-          <div className="flex gap-1 bg-slate-900 p-0.5 rounded border border-slate-800">
+          <div className="flex gap-1 bg-steel-900 p-0.5 rounded border border-steel-800">
             <button
               onClick={() => setViewMode('visual')}
               className={`px-2.5 py-1 rounded text-xs ${
                 viewMode === 'visual'
-                  ? 'bg-emerald-600 text-white font-bold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-crimson-600 text-white font-bold'
+                  : 'text-steel-400 hover:text-white'
               }`}
             >
               Visual Tree
@@ -284,8 +284,8 @@ export const ParseTreeEditor: React.FC<ParseTreeEditorProps> = ({
               onClick={() => setViewMode('json')}
               className={`px-2.5 py-1 rounded text-xs ${
                 viewMode === 'json'
-                  ? 'bg-emerald-600 text-white font-bold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-crimson-600 text-white font-bold'
+                  : 'text-steel-400 hover:text-white'
               }`}
             >
               JSON Structure
@@ -295,16 +295,16 @@ export const ParseTreeEditor: React.FC<ParseTreeEditorProps> = ({
 
         {/* Tree Derived Yield Badge */}
         <div className="flex items-center gap-2">
-          <span className="text-slate-400">Tree Yield:</span>
-          <span className="font-mono font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2.5 py-0.5 rounded">
+          <span className="text-steel-400">Tree Yield:</span>
+          <span className="font-mono font-bold text-gold-300 bg-gold-950/60 border border-gold-500/40 px-2.5 py-0.5 rounded">
             &quot;{leaves}&quot;
           </span>
           {targetString && (
             <span
               className={`text-[11px] px-2 py-0.5 rounded font-mono ${
                 leaves === targetString
-                  ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-800'
-                  : 'bg-amber-950/60 text-amber-300 border border-amber-800'
+                  ? 'bg-gold-900/60 text-gold-300 border border-gold-800'
+                  : 'bg-arc-950/60 text-arc-300 border border-arc-800'
               }`}
             >
               {leaves === targetString ? '✓ Yield matches target' : `Target: "${targetString}"`}
@@ -315,7 +315,7 @@ export const ParseTreeEditor: React.FC<ParseTreeEditorProps> = ({
 
       {/* Visual Mode */}
       {viewMode === 'visual' && (
-        <div className="relative w-full min-h-[300px] max-h-[420px] bg-slate-950 border border-slate-800 rounded-lg overflow-auto p-4 flex justify-center items-center">
+        <div className="relative w-full min-h-[300px] max-h-[420px] bg-steel-950 border border-steel-800 rounded-lg overflow-auto p-4 flex justify-center items-center">
           <svg width={width} height={height} className="select-none">
             {renderSvgElements(positionedRoot)}
           </svg>
@@ -325,14 +325,14 @@ export const ParseTreeEditor: React.FC<ParseTreeEditorProps> = ({
       {/* JSON Mode */}
       {viewMode === 'json' && (
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-slate-300">
+          <label className="text-xs font-semibold text-steel-300">
             Parse Tree Hierarchy (JSON format):
           </label>
           <textarea
             value={value}
             onChange={(e) => onChange(e.target.value)}
             rows={12}
-            className="w-full bg-slate-950 font-mono text-xs p-4 rounded-lg border border-slate-800 text-emerald-300 focus:outline-none focus:border-emerald-500"
+            className="w-full bg-steel-950 font-mono text-xs p-4 rounded-lg border border-steel-800 text-gold-300 focus:outline-none focus:border-gold-500"
           />
         </div>
       )}

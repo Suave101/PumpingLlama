@@ -190,29 +190,29 @@ export function ProfessorStudio() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-8 font-sans">
+    <div className="min-h-screen bg-steel-950 text-steel-100 p-8 font-sans">
       <div className="max-w-7xl mx-auto flex flex-col gap-8">
         {/* Studio Top Navigation Bar */}
-        <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+        <div className="flex justify-between items-center border-b border-steel-800 pb-4">
           <div>
-            <Link href="/" className="text-xs font-semibold text-emerald-400 hover:text-emerald-300">
-              &larr; Back to Workspace
+            <Link href="/" className="text-xs font-semibold text-gold-400 hover:text-gold-300">
+              &larr; Back to Home
             </Link>
             <h1 className="text-3xl font-extrabold text-white mt-1">
-              Professor Studio <span className="text-xs font-mono font-normal bg-slate-800 text-emerald-400 px-2 py-0.5 rounded border border-slate-700 ml-2">Question Creator</span>
+              Professor Studio <span className="text-xs font-mono font-normal bg-steel-800 text-gold-400 px-2 py-0.5 rounded border border-steel-700 ml-2">Question Creator</span>
             </h1>
           </div>
 
           <div className="flex gap-3">
             <button
               onClick={handleCopyJson}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition"
+              className="px-4 py-2 bg-steel-800 hover:bg-steel-700 text-steel-200 text-xs font-semibold rounded-lg border border-steel-700 transition"
             >
               {copiedStatus ? '✓ Copied to Clipboard!' : 'Copy JSON'}
             </button>
             <button
               onClick={handleDownloadJson}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow-lg transition"
+              className="px-4 py-2 bg-crimson-600 hover:bg-crimson-500 text-white text-xs font-semibold rounded-lg shadow-lg transition"
             >
               Download JSON File
             </button>
@@ -223,30 +223,30 @@ export function ProfessorStudio() {
           {/* Main Editing Panels */}
           <div className="lg:col-span-7 flex flex-col gap-8">
             {/* Step 1: Metadata Form */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col gap-4">
-              <h2 className="text-sm font-bold text-emerald-400 uppercase tracking-wider">
+            <div className="bg-steel-900 border border-steel-800 rounded-xl p-6 flex flex-col gap-4">
+              <h2 className="text-sm font-bold text-gold-400 uppercase tracking-wider">
                 1. Problem Metadata
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <label className="text-slate-300 block mb-1 font-semibold">Problem Title:</label>
+                  <label className="text-steel-300 block mb-1 font-semibold">Problem Title:</label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white focus:border-emerald-500 focus:outline-none"
+                    className="w-full bg-steel-950 border border-steel-800 rounded p-2 text-white focus:border-gold-500 focus:outline-none"
                     placeholder="e.g. DFA: Even Zeros"
                   />
                 </div>
 
                 <div>
-                  <label className="text-slate-300 block mb-1 font-semibold">Problem ID (Slug):</label>
+                  <label className="text-steel-300 block mb-1 font-semibold">Problem ID (Slug):</label>
                   <input
                     type="text"
                     value={id}
                     onChange={(e) => setId(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white font-mono focus:border-emerald-500 focus:outline-none"
+                    className="w-full bg-steel-950 border border-steel-800 rounded p-2 text-white font-mono focus:border-gold-500 focus:outline-none"
                     placeholder="e.g. dfa-even-zeros"
                   />
                 </div>
@@ -254,11 +254,11 @@ export function ProfessorStudio() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <label className="text-slate-300 block mb-1 font-semibold">Exercise Type:</label>
+                  <label className="text-steel-300 block mb-1 font-semibold">Exercise Type:</label>
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value as ProblemType)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-emerald-400 font-mono focus:border-emerald-500 focus:outline-none"
+                    className="w-full bg-steel-950 border border-steel-800 rounded p-2 text-gold-400 font-mono focus:border-gold-500 focus:outline-none"
                   >
                     {PROBLEM_TYPES.map((pt) => (
                       <option key={pt.value} value={pt.value}>
@@ -269,29 +269,29 @@ export function ProfessorStudio() {
                 </div>
 
                 <div>
-                  <label className="text-slate-300 block mb-1 font-semibold">Alphabet Σ (comma-separated):</label>
+                  <label className="text-steel-300 block mb-1 font-semibold">Alphabet Σ (comma-separated):</label>
                   <input
                     type="text"
                     value={alphabetInput}
                     onChange={(e) => setAlphabetInput(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white font-mono focus:border-emerald-500 focus:outline-none"
+                    className="w-full bg-steel-950 border border-steel-800 rounded p-2 text-white font-mono focus:border-gold-500 focus:outline-none"
                     placeholder="0, 1"
                   />
                 </div>
               </div>
 
               <div className="text-xs">
-                <label className="text-slate-300 block mb-1 font-semibold">Problem Prompt / Description:</label>
+                <label className="text-steel-300 block mb-1 font-semibold">Problem Prompt / Description:</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
-                  className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-300 focus:border-emerald-500 focus:outline-none"
+                  className="w-full bg-steel-950 border border-steel-800 rounded p-2 text-steel-300 focus:border-gold-500 focus:outline-none"
                 />
               </div>
 
               <div className="text-xs">
-                <label className="text-slate-300 block mb-1 font-semibold">
+                <label className="text-steel-300 block mb-1 font-semibold">
                   Canvas LTI Assignment ID (Optional):
                 </label>
                 <input
@@ -299,18 +299,18 @@ export function ProfessorStudio() {
                   value={ltiAssignmentId}
                   onChange={(e) => setLtiAssignmentId(e.target.value)}
                   placeholder="e.g. canvas_assignment_98234"
-                  className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-400 font-mono focus:border-emerald-500 focus:outline-none"
+                  className="w-full bg-steel-950 border border-steel-800 rounded p-2 text-steel-400 font-mono focus:border-gold-500 focus:outline-none"
                 />
               </div>
             </div>
 
             {/* Step 2: Model Answer Canvas & Editors */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col gap-4">
+            <div className="bg-steel-900 border border-steel-800 rounded-xl p-6 flex flex-col gap-4">
               <div className="flex justify-between items-center">
-                <h2 className="text-sm font-bold text-emerald-400 uppercase tracking-wider">
+                <h2 className="text-sm font-bold text-gold-400 uppercase tracking-wider">
                   2. Model Solution / Reference Answer
                 </h2>
-                <span className="text-xs text-slate-500 font-mono uppercase">{type}</span>
+                <span className="text-xs text-steel-500 font-mono uppercase">{type}</span>
               </div>
 
               {/* DFA Target Editor */}
@@ -348,8 +348,8 @@ export function ProfessorStudio() {
             </div>
 
             {/* Step 3: Test Cases Builder */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col gap-4">
-              <h2 className="text-sm font-bold text-emerald-400 uppercase tracking-wider">
+            <div className="bg-steel-900 border border-steel-800 rounded-xl p-6 flex flex-col gap-4">
+              <h2 className="text-sm font-bold text-gold-400 uppercase tracking-wider">
                 3. Test Case Suite ({testCases.length} Defined)
               </h2>
 
@@ -359,19 +359,19 @@ export function ProfessorStudio() {
                   value={newTestInput}
                   onChange={(e) => setNewTestInput(e.target.value)}
                   placeholder="Enter input string (e.g. 0101 or empty string)"
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded p-2 text-white font-mono focus:outline-none focus:border-emerald-500"
+                  className="flex-1 bg-steel-950 border border-steel-800 rounded p-2 text-white font-mono focus:outline-none focus:border-gold-500"
                 />
                 <select
                   value={newTestExpected ? 'true' : 'false'}
                   onChange={(e) => setNewTestExpected(e.target.value === 'true')}
-                  className="bg-slate-950 border border-slate-800 rounded px-3 text-white font-mono"
+                  className="bg-steel-950 border border-steel-800 rounded px-3 text-white font-mono"
                 >
                   <option value="true">ACCEPT (True)</option>
                   <option value="false font-mono">REJECT (False)</option>
                 </select>
                 <button
                   type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded font-medium transition"
+                  className="bg-crimson-600 hover:bg-crimson-500 text-white px-4 py-2 rounded font-medium transition"
                 >
                   + Add Test Case
                 </button>
@@ -381,10 +381,10 @@ export function ProfessorStudio() {
                 {testCases.map((tc, idx) => (
                   <div
                     key={idx}
-                    className="flex justify-between items-center bg-slate-950 border border-slate-800 px-3 py-2 rounded text-xs"
+                    className="flex justify-between items-center bg-steel-950 border border-steel-800 px-3 py-2 rounded text-xs"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="font-mono text-slate-300">
+                      <span className="font-mono text-steel-300">
                         {tc.input === '' ? '<ε (empty string)>' : `"${tc.input}"`}
                       </span>
                     </div>
@@ -394,7 +394,7 @@ export function ProfessorStudio() {
                         onClick={() => toggleTestCaseExpected(idx)}
                         className={`px-2 py-0.5 rounded font-mono text-[11px] ${
                           tc.expected
-                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                            ? 'bg-gold-950 text-gold-300 border border-gold-800'
                             : 'bg-red-950 text-red-300 border border-red-800'
                         }`}
                       >
@@ -415,12 +415,12 @@ export function ProfessorStudio() {
 
           {/* Right Panel: JSON Preview */}
           <div className="lg:col-span-5 flex flex-col gap-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 sticky top-8">
+            <div className="bg-steel-900 border border-steel-800 rounded-xl p-6 sticky top-8">
               <div className="flex justify-between items-center mb-3">
-                <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">
+                <h3 className="text-sm font-bold text-steel-200 uppercase tracking-wider">
                   Generated Problem JSON
                 </h3>
-                <span className="text-xs text-emerald-400 font-mono">
+                <span className="text-xs text-gold-400 font-mono">
                   {id ? `${id}.json` : 'problem.json'}
                 </span>
               </div>
@@ -428,7 +428,7 @@ export function ProfessorStudio() {
                 readOnly
                 value={JSON.stringify(buildProblemObject(), null, 2)}
                 rows={28}
-                className="w-full bg-slate-950 font-mono text-xs p-4 rounded-lg border border-slate-800 text-emerald-300 focus:outline-none select-all"
+                className="w-full bg-steel-950 font-mono text-xs p-4 rounded-lg border border-steel-800 text-gold-300 focus:outline-none select-all"
               />
             </div>
           </div>

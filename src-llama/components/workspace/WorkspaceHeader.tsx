@@ -11,18 +11,18 @@ interface WorkspaceHeaderProps {
 
 export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ problem }) => {
   return (
-    <header className="flex justify-between items-start border-b border-slate-800 pb-4">
+    <header className="flex justify-between items-start border-b border-steel-800 pb-4">
       <div>
-        <Link href="/" className="text-xs font-semibold text-emerald-400 hover:text-emerald-300">
-          &larr; Back to Problem Overview
+        <Link href="/problems" className="text-xs font-semibold text-gold-400 hover:text-gold-300">
+          &larr; Back to Problems
         </Link>
         <div className="flex items-center gap-3 mt-2">
-          <span className="text-xs uppercase tracking-wider font-semibold px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-emerald-400 font-mono">
+          <span className="text-xs uppercase tracking-wider font-semibold px-2.5 py-1 rounded bg-steel-900 border border-steel-700 text-gold-400 font-mono">
             {problem.type}
           </span>
           <h1 className="text-2xl font-bold text-white">{problem.title}</h1>
         </div>
-        <div className="text-slate-400 text-sm mt-1">
+        <div className="text-steel-400 text-sm mt-1">
           <ReactMarkdown
             remarkPlugins={[remarkMath]}
             rehypePlugins={[rehypeKatex]}

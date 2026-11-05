@@ -142,31 +142,31 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ alphabet, dfa, onCha
   const edgeMap = getTransitionsList();
 
   return (
-    <div className="flex flex-col gap-4 bg-slate-900 border border-slate-800 rounded-xl p-5">
+    <div className="flex flex-col gap-4 bg-steel-900 border border-steel-800 rounded-xl p-5">
       {/* Top Toolbar */}
-      <div className="flex justify-between items-center bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs">
+      <div className="flex justify-between items-center bg-steel-950 p-3 rounded-lg border border-steel-800 text-xs">
         <div className="flex items-center gap-2">
           <button
             onClick={addState}
-            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded transition"
+            className="px-3 py-1.5 bg-crimson-600 hover:bg-crimson-500 text-white font-medium rounded transition"
           >
             + Add State
           </button>
-          <span className="text-slate-400">
+          <span className="text-steel-400">
             States: <strong className="text-white font-mono">{dfa.states.length}</strong>
           </span>
         </div>
 
         {selectedState && (
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 font-mono">State: {selectedState}</span>
+            <span className="text-steel-400 font-mono">State: {selectedState}</span>
             <button
               onClick={() => setInitialState(selectedState)}
               disabled={dfa.initialState === selectedState}
               className={`px-2.5 py-1 rounded text-xs ${
                 dfa.initialState === selectedState
-                  ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-slate-800 text-slate-300 hover:text-white'
+                  ? 'bg-steel-800 text-gold-400 border border-gold-500/30'
+                  : 'bg-steel-800 text-steel-300 hover:text-white'
               }`}
             >
               {dfa.initialState === selectedState ? '✓ Initial' : 'Set Start'}
@@ -175,8 +175,8 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ alphabet, dfa, onCha
               onClick={() => toggleAcceptState(selectedState)}
               className={`px-2.5 py-1 rounded text-xs ${
                 dfa.acceptStates.includes(selectedState)
-                  ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-500/50'
-                  : 'bg-slate-800 text-slate-300 hover:text-white'
+                  ? 'bg-gold-900/60 text-gold-300 border border-gold-500/50'
+                  : 'bg-steel-800 text-steel-300 hover:text-white'
               }`}
             >
               {dfa.acceptStates.includes(selectedState) ? '✓ Accept State' : 'Make Accept'}
@@ -194,7 +194,7 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ alphabet, dfa, onCha
       </div>
 
       {/* SVG Canvas Area */}
-      <div className="relative w-full h-[320px] bg-slate-950 border border-slate-800 rounded-lg overflow-hidden">
+      <div className="relative w-full h-[320px] bg-steel-950 border border-steel-800 rounded-lg overflow-hidden">
         <svg
           className="w-full h-full cursor-crosshair select-none"
           onMouseMove={handleMouseMove}
@@ -210,7 +210,7 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ alphabet, dfa, onCha
               refY="3"
               orient="auto"
             >
-              <polygon points="0 0, 8 3, 0 6" fill="#10b981" />
+              <polygon points="0 0, 8 3, 0 6" fill="#e0a21b" />
             </marker>
           </defs>
 
@@ -230,14 +230,14 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ alphabet, dfa, onCha
                       posFrom.y - 20
                     }`}
                     fill="none"
-                    stroke="#10b981"
+                    stroke="#e0a21b"
                     strokeWidth="2"
                     markerEnd="url(#arrowhead)"
                   />
                   <text
                     x={posFrom.x}
                     y={posFrom.y - 45}
-                    fill="#34d399"
+                    fill="#f0b72f"
                     fontSize="11"
                     textAnchor="middle"
                     className="font-mono font-bold"
@@ -269,17 +269,17 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ alphabet, dfa, onCha
                 <path
                   d={pathD}
                   fill="none"
-                  stroke="#10b981"
+                  stroke="#e0a21b"
                   strokeWidth="2"
                   markerEnd="url(#arrowhead)"
                 />
                 <text
                   x={midX}
                   y={midY - 5}
-                  fill="#34d399"
+                  fill="#f0b72f"
                   fontSize="11"
                   textAnchor="middle"
-                  className="font-mono font-bold bg-slate-950"
+                  className="font-mono font-bold bg-steel-950"
                 >
                   {label}
                 </text>
@@ -306,7 +306,7 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ alphabet, dfa, onCha
                   <path
                     d="M -45 0 L -22 0"
                     fill="none"
-                    stroke="#38bdf8"
+                    stroke="#4fe3ea"
                     strokeWidth="2.5"
                     markerEnd="url(#arrowhead)"
                   />
@@ -317,7 +317,7 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ alphabet, dfa, onCha
                   <circle
                     r="24"
                     fill="none"
-                    stroke={isSelected ? '#10b981' : '#059669'}
+                    stroke={isSelected ? '#e0a21b' : '#c08414'}
                     strokeWidth="2"
                   />
                 )}
@@ -325,14 +325,14 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ alphabet, dfa, onCha
                 {/* Main Node Circle */}
                 <circle
                   r="20"
-                  fill={isSelected ? '#064e3b' : '#0f172a'}
-                  stroke={isSelected ? '#34d399' : isInitial ? '#38bdf8' : '#475569'}
+                  fill={isSelected ? '#4a3210' : '#1a1c21'}
+                  stroke={isSelected ? '#f0b72f' : isInitial ? '#4fe3ea' : '#535962'}
                   strokeWidth={isSelected ? '3' : '2'}
                 />
 
                 {/* Label */}
                 <text
-                  fill="#f8fafc"
+                  fill="#f6f6f7"
                   fontSize="12"
                   fontWeight="bold"
                   textAnchor="middle"
@@ -348,14 +348,14 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ alphabet, dfa, onCha
       </div>
 
       {/* Transition Matrix / Form Editor */}
-      <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
-        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
+      <div className="bg-steel-950 p-4 rounded-lg border border-steel-800">
+        <h4 className="text-xs font-bold text-steel-300 uppercase tracking-wider mb-3">
           Transition Table Editor
         </h4>
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left border-collapse font-mono">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400">
+              <tr className="border-b border-steel-800 text-steel-400">
                 <th className="p-2">State</th>
                 {alphabet.map((sym) => (
                   <th key={sym} className="p-2 text-center">
@@ -366,8 +366,8 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ alphabet, dfa, onCha
             </thead>
             <tbody>
               {dfa.states.map((state) => (
-                <tr key={state} className="border-b border-slate-800/50 hover:bg-slate-900/50">
-                  <td className="p-2 text-emerald-400 font-bold">
+                <tr key={state} className="border-b border-steel-800/50 hover:bg-steel-900/50">
+                  <td className="p-2 text-gold-400 font-bold">
                     {state} {dfa.initialState === state ? '(start)' : ''}{' '}
                     {dfa.acceptStates.includes(state) ? '*' : ''}
                   </td>
@@ -378,7 +378,7 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ alphabet, dfa, onCha
                         <select
                           value={currentTo}
                           onChange={(e) => setTransition(state, sym, e.target.value)}
-                          className="bg-slate-900 text-white border border-slate-700 rounded px-2 py-1 text-xs focus:border-emerald-500 focus:outline-none"
+                          className="bg-steel-900 text-white border border-steel-700 rounded px-2 py-1 text-xs focus:border-gold-500 focus:outline-none"
                         >
                           <option value="">-- None --</option>
                           {dfa.states.map((s) => (

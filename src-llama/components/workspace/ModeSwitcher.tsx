@@ -15,15 +15,15 @@ export const ModeSwitcher: React.FC<ModeSwitcherProps> = ({
   if (allowedModes.length <= 1) return null;
 
   return (
-    <div className="flex justify-between items-center bg-slate-900 p-2 rounded-lg border border-slate-800">
-      <span className="text-xs text-slate-400 pl-2">Editor Mode:</span>
+    <div className="flex justify-between items-center bg-steel-900 p-2 rounded-lg border border-steel-800">
+      <span className="text-xs text-steel-400 pl-2">Editor Mode:</span>
       <div className="flex gap-1">
         {allowedModes.map((mode) => (
           <button
             key={mode}
             onClick={() => onSelectMode(mode)}
             className={`px-3 py-1 rounded text-xs font-medium uppercase ${
-              currentMode === mode ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+              currentMode === mode ? 'bg-crimson-600 text-white' : 'text-steel-400 hover:text-white'
             }`}
           >
             {mode}
