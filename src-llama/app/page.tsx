@@ -1,15 +1,16 @@
 import Link from 'next/link';
-import { CATEGORY_ORDER, getCategoryMeta, groupByCategory, loadProblems } from '@/lib/problems';
+import { loadProblems } from '@/lib/problems';
+import { tableOfContents } from '@/lib/textbook/book';
 import { SiteNav } from '@/components/site/SiteNav';
 import { LogoMark } from '@/components/site/Logo';
 
 const STEPS = [
   {
-    title: 'Pick a problem',
-    body: 'DFAs, regular expressions, grammars, pushdown automata, parse trees and pumping lemma proofs.',
+    title: 'Read a short section',
+    body: 'Each idea is followed right away by a participation activity or an animation you step through.',
   },
   {
-    title: 'Build your answer',
+    title: 'Build your answer in a lab',
     body: 'Drag states onto a canvas, write production rules, grow a parse tree, or pick a string to pump.',
   },
   {
@@ -80,9 +81,8 @@ function HeroAutomaton() {
 
 export default function HomePage() {
   const problems = loadProblems();
-  const groups = groupByCategory(problems);
-  const topics = groups.filter((g) => CATEGORY_ORDER.includes(g.key));
-  const starter = problems.find((p) => p.slug === 'odd-1s') ?? groups[0]?.items[0];
+  const chapters = tableOfContents();
+  const sectionCount = chapters.reduce((n, c) => n + c.sections.length, 0);
 
   return (
     <main className="relative isolate min-h-screen bg-steel-950 text-steel-100 px-4 sm:px-8 font-sans overflow-hidden">
@@ -117,33 +117,36 @@ export default function HomePage() {
             </span>
           </h1>
           <p className="text-steel-400 text-base sm:text-lg max-w-xl leading-relaxed">
-            Pumping Llama checks your DFAs, grammars, pushdown automata and proofs against the target language and
-            shows you a string that proves your answer wrong.
+            An interactive automata theory textbook. Read a little, practice right away, then build DFAs, grammars,
+            pushdown automata and proofs in labs that show you a string that proves your answer wrong. It works on its
+            own or inside Canvas.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link
-              href="/problems"
+              href="/book"
               className="px-5 py-3 rounded-lg bg-crimson-600 hover:bg-crimson-500 text-white font-semibold transition shadow-lg"
             >
-              Browse {problems.length} problems
+              Start reading
             </Link>
-            {starter && (
-              <Link
-                href={`/problem/${starter.slug}`}
-                className="px-5 py-3 rounded-lg border border-steel-700 hover:border-gold-500/60 text-steel-200 hover:text-white font-semibold transition"
-              >
-                Try a starter problem &rarr;
-              </Link>
-            )}
+            <Link
+              href="/problems"
+              className="px-5 py-3 rounded-lg border border-steel-700 hover:border-gold-500/60 text-steel-200 hover:text-white font-semibold transition"
+            >
+              Browse {problems.length} labs &rarr;
+            </Link>
           </div>
           <dl className="flex gap-8 pt-2">
             <div>
-              <dt className="text-xs text-steel-500">Problems</dt>
-              <dd className="text-2xl font-bold text-white font-mono">{problems.length}</dd>
+              <dt className="text-xs text-steel-500">Chapters</dt>
+              <dd className="text-2xl font-bold text-white font-mono">{chapters.length}</dd>
             </div>
             <div>
-              <dt className="text-xs text-steel-500">Topics</dt>
-              <dd className="text-2xl font-bold text-white font-mono">{topics.length}</dd>
+              <dt className="text-xs text-steel-500">Sections</dt>
+              <dd className="text-2xl font-bold text-white font-mono">{sectionCount}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-steel-500">Labs</dt>
+              <dd className="text-2xl font-bold text-white font-mono">{problems.length}</dd>
             </div>
           </dl>
         </div>
@@ -166,36 +169,31 @@ export default function HomePage() {
         </ol>
       </section>
 
-      {/* Topics */}
+      {/* Chapters */}
       <section className="max-w-6xl mx-auto pb-20">
         <div className="flex items-end justify-between gap-4 mb-6">
-          <h2 className="text-2xl font-bold text-white">Topics</h2>
-          <Link href="/problems" className="text-sm text-gold-400 hover:text-gold-300 font-medium">
-            All problems &rarr;
+          <h2 className="text-2xl font-bold text-white">Chapters</h2>
+          <Link href="/book" className="text-sm text-gold-400 hover:text-gold-300 font-medium">
+            Table of contents &rarr;
           </Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {topics.map(({ key, items }) => {
-            const meta = getCategoryMeta(key);
-            return (
-              <Link
-                key={key}
-                href={`/problems#${key}`}
-                className="bg-steel-900 border border-steel-800 hover:border-gold-500/50 rounded-xl p-5 flex flex-col gap-3 transition group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl" aria-hidden="true">
-                    {meta.icon}
-                  </span>
-                  <span className="text-xs bg-steel-800 text-steel-300 px-2 py-0.5 rounded-full font-mono">
-                    {items.length}
-                  </span>
-                </div>
-                <h3 className="text-sm font-bold text-white group-hover:text-gold-300 transition">{meta.title}</h3>
-                <p className="text-xs text-steel-400 leading-relaxed">{meta.description}</p>
-              </Link>
-            );
-          })}
+          {chapters.map((chapter) => (
+            <Link
+              key={chapter.id}
+              href={chapter.sections[0]?.href ?? '/book'}
+              className="bg-steel-900 border border-steel-800 hover:border-gold-500/50 rounded-xl p-5 flex flex-col gap-3 transition group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-mono font-bold text-gold-400">{chapter.number}</span>
+                <span className="text-xs bg-steel-800 text-steel-300 px-2 py-0.5 rounded-full font-mono">
+                  {chapter.sections.length} sections
+                </span>
+              </div>
+              <h3 className="text-sm font-bold text-white group-hover:text-gold-300 transition">{chapter.title}</h3>
+              <p className="text-xs text-steel-400 leading-relaxed">{chapter.summary}</p>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -205,15 +203,15 @@ export default function HomePage() {
           <div>
             <h2 className="text-xl font-bold text-white">Teaching a course?</h2>
             <p className="text-sm text-steel-400 mt-1 max-w-xl">
-              Write your own problems in the Professor Studio: define the answer, add test cases, and export a problem
-              file to drop into the site.
+              Add any section to Canvas as a graded assignment through LTI 1.3. Grades for activities and labs go to the
+              gradebook as students work. You can also write your own labs in the Professor Studio.
             </p>
           </div>
           <Link
-            href="/admin/studio"
+            href="/instructors"
             className="shrink-0 px-5 py-3 rounded-lg border border-gold-600/60 text-gold-300 hover:bg-gold-950/60 font-semibold transition"
           >
-            Open Professor Studio
+            Set up Canvas
           </Link>
         </div>
       </section>

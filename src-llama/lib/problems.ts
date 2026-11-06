@@ -75,7 +75,24 @@ export function resolveCategoryKey(type: string): string {
 
 export type ProblemEntry = { slug: string; problem: Problem };
 
-// Reads every problem file at build time (the site is statically exported)
+// Problem slugs are file names, so only allow safe characters before touching the filesystem
+export function loadProblem(slug: string): Problem | null {
+  if (!/^[a-z0-9-]+$/i.test(slug)) return null;
+  const filePath = path.join(process.cwd(), 'public/problems', `${slug}.json`);
+  if (!fs.existsSync(filePath)) return null;
+  return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Problem;
+}
+
+export function loadProblemMap(slugs: string[]): Record<string, Problem> {
+  const map: Record<string, Problem> = {};
+  for (const slug of slugs) {
+    const problem = loadProblem(slug);
+    if (problem) map[slug] = problem;
+  }
+  return map;
+}
+
+// Reads every problem file on the server (at build time for prerendered pages)
 export function loadProblems(): ProblemEntry[] {
   const problemsDir = path.join(process.cwd(), 'public/problems');
   if (!fs.existsSync(problemsDir)) return [];

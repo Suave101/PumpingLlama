@@ -118,7 +118,16 @@ const errorResult = (feedback: string): VerificationResult => ({
   feedback,
 });
 
-export default function ProblemWorkspace({ problem }: { problem: Problem }) {
+export type Submission = Parameters<typeof evaluateSolution>[0];
+
+type ProblemWorkspaceProps = {
+  problem: Problem;
+  // Embedded in a textbook section: no page chrome, single column
+  embedded?: boolean;
+  onSubmit?: (submission: Submission, result: VerificationResult) => void;
+};
+
+export default function ProblemWorkspace({ problem, embedded = false, onSubmit }: ProblemWorkspaceProps) {
   const modeConfig = useMemo(() => getProblemModeConfig(problem.type), [problem.type]);
   const [editorMode, setEditorMode] = useState<EditorMode>(modeConfig.defaultMode);
   const machineIsPda = modeConfig.defaultMode === 'pda';
@@ -186,7 +195,7 @@ export default function ProblemWorkspace({ problem }: { problem: Problem }) {
   };
 
   const handleVerify = () => {
-    const payload: Parameters<typeof evaluateSolution>[0] = {};
+    const payload: Submission = {};
 
     if (editorMode === 'canvas' || editorMode === 'pda' || editorMode === 'json') {
       let machine: DFA | PDA = machineIsPda ? pdaState : dfaState;
@@ -223,59 +232,66 @@ export default function ProblemWorkspace({ problem }: { problem: Problem }) {
       }
     }
 
-    setVerificationResult(evaluateSolution(payload, problem));
+    const result = evaluateSolution(payload, problem);
+    setVerificationResult(result);
+    onSubmit?.(payload, result);
   };
+
+  const body = (
+    <div className={embedded ? 'flex flex-col gap-6' : 'grid grid-cols-1 lg:grid-cols-12 gap-8'}>
+      <div className={embedded ? 'flex flex-col gap-6' : 'lg:col-span-7 flex flex-col gap-6'}>
+        {givenCFG && <GrammarCard cfg={givenCFG} title="Given grammar" />}
+        {showGivenDFA && <DFATable dfa={problem.answerDFA!} />}
+
+        <ModeSwitcher
+          allowedModes={modeConfig.allowedModes}
+          currentMode={editorMode}
+          onSelectMode={handleSelectMode}
+        />
+
+        {editorMode === 'canvas' && (
+          <CanvasEditor alphabet={alphabet} dfa={dfaState} onChange={setDfaState} />
+        )}
+        {editorMode === 'pda' && <PdaCanvasEditor pda={pdaState} onChange={setPdaState} />}
+        {editorMode === 'json' && <JsonEditor value={jsonText} onChange={setJsonText} />}
+        {editorMode === 'cfg' && <CfgEditor value={cfgText} onChange={setCfgText} />}
+        {editorMode === 'pumping' && (
+          <PumpingLemmaEditor value={pumpingState} onChange={setPumpingState} />
+        )}
+        {editorMode === 'parse-tree' && (
+          <ParseTreeEditor
+            value={parseTreeInput}
+            onChange={setParseTreeInput}
+            targetString={targetString}
+            startSymbol={startSymbol}
+          />
+        )}
+        {editorMode === 'ambiguity' && (
+          <AmbiguityEditor value={ambiguityState} onChange={setAmbiguityState} startSymbol={startSymbol} />
+        )}
+        {editorMode === 'regex' && <RegexEditor value={regexInput} onChange={setRegexInput} />}
+
+        <button
+          onClick={handleVerify}
+          className="w-full bg-crimson-600 hover:bg-crimson-500 text-white font-medium py-3 rounded-lg transition shadow-lg"
+        >
+          Verify Solution & Run Evaluator
+        </button>
+      </div>
+
+      <div className={embedded ? 'flex flex-col gap-6' : 'lg:col-span-5 flex flex-col gap-6'}>
+        <VerificationPanel result={verificationResult} />
+      </div>
+    </div>
+  );
+
+  if (embedded) return body;
 
   return (
     <main className="min-h-screen bg-steel-950 text-steel-100 p-8 font-sans">
       <div className="max-w-7xl mx-auto flex flex-col gap-6">
         <WorkspaceHeader problem={problem} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-7 flex flex-col gap-6">
-            {givenCFG && <GrammarCard cfg={givenCFG} title="Given grammar" />}
-            {showGivenDFA && <DFATable dfa={problem.answerDFA!} />}
-
-            <ModeSwitcher
-              allowedModes={modeConfig.allowedModes}
-              currentMode={editorMode}
-              onSelectMode={handleSelectMode}
-            />
-
-            {editorMode === 'canvas' && (
-              <CanvasEditor alphabet={alphabet} dfa={dfaState} onChange={setDfaState} />
-            )}
-            {editorMode === 'pda' && <PdaCanvasEditor pda={pdaState} onChange={setPdaState} />}
-            {editorMode === 'json' && <JsonEditor value={jsonText} onChange={setJsonText} />}
-            {editorMode === 'cfg' && <CfgEditor value={cfgText} onChange={setCfgText} />}
-            {editorMode === 'pumping' && (
-              <PumpingLemmaEditor value={pumpingState} onChange={setPumpingState} />
-            )}
-            {editorMode === 'parse-tree' && (
-              <ParseTreeEditor
-                value={parseTreeInput}
-                onChange={setParseTreeInput}
-                targetString={targetString}
-                startSymbol={startSymbol}
-              />
-            )}
-            {editorMode === 'ambiguity' && (
-              <AmbiguityEditor value={ambiguityState} onChange={setAmbiguityState} startSymbol={startSymbol} />
-            )}
-            {editorMode === 'regex' && <RegexEditor value={regexInput} onChange={setRegexInput} />}
-
-            <button
-              onClick={handleVerify}
-              className="w-full bg-crimson-600 hover:bg-crimson-500 text-white font-medium py-3 rounded-lg transition shadow-lg"
-            >
-              Verify Solution & Run Evaluator
-            </button>
-          </div>
-
-          <div className="lg:col-span-5 flex flex-col gap-6">
-            <VerificationPanel result={verificationResult} />
-          </div>
-        </div>
+        {body}
       </div>
     </main>
   );

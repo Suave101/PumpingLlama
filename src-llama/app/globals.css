@@ -69,3 +69,66 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Textbook prose (components/textbook/Markdown.tsx) */
+.book-prose {
+  color: var(--color-steel-200);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.book-prose > * + * {
+  margin-top: 1em;
+}
+.book-prose strong {
+  color: #fff;
+  font-weight: 600;
+}
+.book-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--color-crimson-200);
+  background: var(--color-steel-900);
+  border: 1px solid var(--color-steel-800);
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+}
+.book-prose ul,
+.book-prose ol {
+  padding-left: 1.5em;
+}
+.book-prose ul {
+  list-style: disc;
+}
+.book-prose ol {
+  list-style: decimal;
+}
+.book-prose li + li {
+  margin-top: 0.35em;
+}
+.book-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.book-prose th,
+.book-prose td {
+  text-align: left;
+  padding: 0.45em 0.75em;
+  border-bottom: 1px solid var(--color-steel-800);
+}
+.book-prose th {
+  color: var(--color-steel-400);
+  font-weight: 600;
+}
+.book-prose .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25em 0;
+}
+/* Short prompts and answer choices: no paragraph spacing */
+.book-prose-inline > * + * {
+  margin-top: 0.5em;
+}
+.book-prose-inline {
+  line-height: 1.6;
+}
