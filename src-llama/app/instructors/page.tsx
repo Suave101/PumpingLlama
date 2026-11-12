@@ -67,7 +67,7 @@ export default function InstructorsPage() {
               <p>
                 Set the submission type to <strong className="text-white">External Tool</strong>, click{' '}
                 <strong className="text-white">Find</strong>, choose Pumping Llama, and tick the sections you want. The
-                points come from the section&apos;s activities: 1 per participation activity and 5 per lab.
+                points come from the section&apos;s activities: 1 per question or animation and 5 per lab.
               </p>
             </Step>
             <Step n={2} title="Ungraded: add a module item">

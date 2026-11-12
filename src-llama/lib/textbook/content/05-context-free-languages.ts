@@ -5,6 +5,11 @@ export const contextFreeLanguages: Chapter = {
   id: 'context-free-languages',
   title: 'Context-free languages',
   summary: 'Grammars, derivations and parse trees, ambiguity, pushdown automata, normal forms, and the pumping lemma.',
+  keyIdeas: md`- A context-free grammar generates strings by rewriting non-terminals. Every regular language is context-free.
+- A parse tree forgets the order of a derivation. A grammar is ambiguous if some string has two parse trees, or equivalently two leftmost derivations.
+- Pushdown automata (an NFA plus a stack) accept exactly the context-free languages, but deterministic ones are weaker.
+- Every grammar can be converted to Chomsky normal form.
+- The pumping lemma for context-free languages shows that languages like $\texttt{a}^n\texttt{b}^n\texttt{c}^n$ are not context-free.`,
   sections: [
     {
       id: 'grammars',
@@ -36,6 +41,14 @@ language of $G$ is $L(G) = \{ w \in \Sigma^* \mid S \Rightarrow^* w \}$.
 For example, with the rules $S \to \texttt{0}S\texttt{1} \mid \varepsilon$:
 
 $$S \Rightarrow \texttt{0}S\texttt{1} \Rightarrow \texttt{00}S\texttt{11} \Rightarrow \texttt{0011}$$`,
+        },
+        {
+          type: 'derivation',
+          id: 'cfg-derive-0011',
+          prompt: md`Build a derivation of \`0011\`. At each step, choose which rule to apply to the leftmost
+non-terminal.`,
+          grammar: { start: 'S', rules: { S: ['0S1', ''] } },
+          target: '0011',
         },
         {
           type: 'membership',
@@ -95,6 +108,15 @@ way, but a grammar with separate levels for sums and products describes the same
             { text: 'One string with two different derivations of any kind', explain: 'Even unambiguous grammars allow several derivations that differ only in order.' },
           ],
         },
+        {
+          type: 'derivation',
+          id: 'parse-derive-expression',
+          prompt: md`Find a leftmost derivation of \`a+a*a\` using $E \to E+E \mid E*E \mid \texttt{a}$. Then press
+**Start over** and look for a *different* one. Two leftmost derivations of the same string are exactly what
+makes this grammar ambiguous.`,
+          grammar: { start: 'E', rules: { E: ['E+E', 'E*E', 'a'] } },
+          target: 'a+a*a',
+        },
         { type: 'lab', id: 'lab-parse-tree-simple', problem: 'parse-tree-simple' },
         { type: 'lab', id: 'lab-ambiguity-expression-grammar', problem: 'ambiguity-expression-grammar' },
       ],
@@ -122,6 +144,13 @@ and every string in $L$ can be derived (induction on string length).`,
           prompt: md`Using $S \to (S)S \mid \varepsilon$, how many times is the rule $S \to (S)S$ used to derive \`(())()\`?`,
           answers: ['3', 'three'],
           explain: md`Each use creates one matching pair of parentheses, and \`(())()\` has three pairs.`,
+        },
+        {
+          type: 'derivation',
+          id: 'design-derive-balanced',
+          prompt: md`Derive \`(())()\` with $S \to (S)S \mid \varepsilon$, always expanding the leftmost $S$.`,
+          grammar: { start: 'S', rules: { S: ['(S)S', ''] } },
+          target: '(())()',
         },
         { type: 'lab', id: 'lab-cfg-an-bn', problem: 'cfg-an-bn' },
         { type: 'lab', id: 'lab-cfg-balanced-parentheses', problem: 'cfg-balanced-parentheses' },

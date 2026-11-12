@@ -1,0 +1,27 @@
+{
+  "id": "regex-contains-101",
+  "type": "regex-construction",
+  "title": "Regex: Contains \"101\"",
+  "description": "Write a regular expression over alphabet {0, 1} for the strings that contain \"101\" as a substring.",
+  "alphabet": ["0", "1"],
+  "answerDFA": {
+    "states": ["s", "saw1", "saw10", "found"],
+    "alphabet": ["0", "1"],
+    "initialState": "s",
+    "acceptStates": ["found"],
+    "transitions": {
+      "s": { "0": "s", "1": "saw1" },
+      "saw1": { "0": "saw10", "1": "saw1" },
+      "saw10": { "0": "s", "1": "found" },
+      "found": { "0": "found", "1": "found" }
+    }
+  },
+  "testCases": [
+    { "input": "101", "expected": true },
+    { "input": "0101", "expected": true },
+    { "input": "11011", "expected": true },
+    { "input": "", "expected": false },
+    { "input": "100", "expected": false },
+    { "input": "1001", "expected": false }
+  ]
+}

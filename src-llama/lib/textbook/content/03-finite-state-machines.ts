@@ -25,6 +25,10 @@ export const finiteStateMachines: Chapter = {
   id: 'finite-state-machines',
   title: 'Finite-state machines',
   summary: 'Deterministic finite automata, how to design them, the product construction, and fooling sets.',
+  keyIdeas: md`- A DFA reads its input once, left to right, remembering only its current state. It accepts when $\delta^*(s, w) \in A$.
+- Design by deciding what each state must remember about the prefix read so far.
+- The product construction runs two DFAs at once, so DFA languages are closed under $\cap$, $\cup$, $\setminus$ and complement.
+- Strings that some suffix tells apart need different states. An infinite fooling set proves a language is not regular.`,
   sections: [
     {
       id: 'dfas',
@@ -116,6 +120,19 @@ Before you build, write down in words what each state *means*. A good state desc
 and the proof of correctness almost mechanical.`,
         },
         {
+          type: 'table',
+          id: 'design-table-ends-01',
+          prompt: md`Complete the transition table for the "ends with \`01\`" machine above. Remember what each state
+means: \`s\` has nothing useful, \`saw0\` ends in \`0\`, and \`saw01\` ends in \`01\`.`,
+          dfa: ENDS_01,
+          blanks: [
+            ['s', '0'],
+            ['saw0', '1'],
+            ['saw01', '0'],
+            ['saw01', '1'],
+          ],
+        },
+        {
           type: 'short',
           id: 'design-states-ends-01',
           prompt: md`What is the fewest number of states a DFA for "ends with \`01\`" can have?`,
@@ -160,6 +177,31 @@ complement, swap accepting and non-accepting states.`,
             { text: md`$p \in A_1$ and $q \in A_2$`, correct: true, explain: 'Right. Both machines must accept.' },
             { text: md`$p \in A_1$ or $q \in A_2$`, explain: 'That computes the union.' },
             { text: md`$p \in A_1$ and $q \notin A_2$`, explain: md`That computes $L(M_1) \setminus L(M_2)$.` },
+          ],
+        },
+        {
+          type: 'table',
+          id: 'product-table-parity',
+          prompt: md`One machine tracks whether it has seen an even (\`e\`) or odd (\`o\`) number of \`0\`s; another does
+the same for \`1\`s. In their product, state \`eo\` means "even \`0\`s, odd \`1\`s". Complete the table so the
+product accepts strings with an even number of \`0\`s **and** an even number of \`1\`s.`,
+          dfa: {
+            states: ['ee', 'eo', 'oe', 'oo'],
+            alphabet: ['0', '1'],
+            initialState: 'ee',
+            acceptStates: ['ee'],
+            transitions: {
+              ee: { '0': 'oe', '1': 'eo' },
+              eo: { '0': 'oo', '1': 'ee' },
+              oe: { '0': 'ee', '1': 'oo' },
+              oo: { '0': 'eo', '1': 'oe' },
+            },
+          },
+          blanks: [
+            ['eo', '0'],
+            ['oe', '1'],
+            ['oo', '0'],
+            ['oo', '1'],
           ],
         },
         {

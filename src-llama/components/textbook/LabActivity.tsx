@@ -23,7 +23,10 @@ export const LabActivity: React.FC<LabProps> = ({ problem, passed, onSubmit }) =
         </div>
       </div>
       {open ? (
-        <ProblemWorkspace problem={problem} embedded onSubmit={(submission) => onSubmit(submission)} />
+        // The editors are drawn for a dark background, so a lab keeps the night palette on paper pages
+        <div className="reading-night rounded-xl bg-steel-950 text-steel-100 p-4 -mx-1">
+          <ProblemWorkspace problem={problem} embedded onSubmit={(submission) => onSubmit(submission)} />
+        </div>
       ) : (
         <button
           onClick={() => setOpen(true)}

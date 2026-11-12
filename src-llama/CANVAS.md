@@ -4,8 +4,8 @@
 
 - `lib/textbook/content/` holds one file per chapter. A chapter has sections, and a section is a list of blocks:
   - `text` and `callout` (Markdown with KaTeX)
-  - `choice`, `membership` and `short`: participation activities, 1 point each by default
-  - `trace`: step through a DFA, 1 point for watching to the end
+  - `choice`, `membership` and `short`: check-your-understanding questions, 1 point each by default
+  - `trace`, `nfa-trace` and `tm-trace`: step through a DFA, NFA or Turing machine, 1 point for watching to the end
   - `lab`: one of the problems in `public/problems`, solved in the full workspace, 5 points by default
 - The chapter order follows Jeff Erickson's *Models of Computation* notes (CC BY-NC-SA 4.0), which the book links as
   companion reading. The prose and activities are original. If you paste text from those notes into a section, that

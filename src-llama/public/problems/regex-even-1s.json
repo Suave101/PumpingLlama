@@ -1,0 +1,25 @@
+{
+  "id": "regex-even-1s",
+  "type": "regex-construction",
+  "title": "Regex: Even Number of 1s",
+  "description": "Write a regular expression over alphabet {0, 1} for the strings that contain an even number of \"1\"s (zero counts as even).",
+  "alphabet": ["0", "1"],
+  "answerDFA": {
+    "states": ["even", "odd"],
+    "alphabet": ["0", "1"],
+    "initialState": "even",
+    "acceptStates": ["even"],
+    "transitions": {
+      "even": { "0": "even", "1": "odd" },
+      "odd": { "0": "odd", "1": "even" }
+    }
+  },
+  "testCases": [
+    { "input": "", "expected": true },
+    { "input": "11", "expected": true },
+    { "input": "0101", "expected": true },
+    { "input": "1", "expected": false },
+    { "input": "010", "expected": false },
+    { "input": "111", "expected": false }
+  ]
+}

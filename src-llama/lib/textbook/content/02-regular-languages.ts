@@ -5,6 +5,10 @@ export const regularLanguages: Chapter = {
   id: 'regular-languages',
   title: 'Regular languages',
   summary: 'Languages as sets of strings, the operations that build them, and regular expressions.',
+  keyIdeas: md`- A language is any set of strings. $\varnothing$ and $\{\varepsilon\}$ are different languages.
+- Regular languages are built from $\varnothing$, $\{\varepsilon\}$ and single symbols using union, concatenation and star.
+- A regular expression names a regular language. Star binds tightest, then concatenation, then union.
+- There are countably many regular expressions and uncountably many languages, so most languages are not regular.`,
   sections: [
     {
       id: 'languages',
@@ -157,6 +161,25 @@ That model is the finite-state machine, which comes next.`,
             { text: 'Regular expressions cannot use the empty string', explain: md`They can: $\varepsilon$ is a regular expression.` },
           ],
         },
+      ],
+    },
+    {
+      id: 'exercises',
+      title: 'Exercises',
+      blocks: [
+        {
+          type: 'text',
+          md: md`Write a regular expression for each language. Use \`+\` or \`|\` for union, \`*\` for star and \`ε\` for
+the empty string. The checker compares your expression with the target language on every short string and shows
+one where they disagree.
+
+A good habit: before you write anything, list a few short strings that should match and a few that shouldn't,
+including $\varepsilon$.`,
+        },
+        { type: 'lab', id: 'lab-regex-starts-with-1', problem: 'regex-starts-with-1' },
+        { type: 'lab', id: 'lab-regex-even-1s', problem: 'regex-even-1s' },
+        { type: 'lab', id: 'lab-regex-contains-101', problem: 'regex-contains-101' },
+        { type: 'lab', id: 'lab-regex-no-00', problem: 'regex-no-00' },
       ],
     },
   ],

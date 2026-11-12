@@ -5,6 +5,9 @@ export const nondeterministicAutomata: Chapter = {
   id: 'nondeterministic-automata',
   title: 'Nondeterministic automata',
   summary: 'NFAs, ε-transitions, and Kleene’s theorem connecting automata and regular expressions.',
+  keyIdeas: md`- An NFA accepts if **some** run accepts. ε-transitions move without reading input.
+- The subset construction tracks the set of possible states, turning an $n$-state NFA into a DFA with at most $2^n$ states.
+- Kleene's theorem: regular expressions, NFAs and DFAs describe exactly the same languages.`,
   sections: [
     {
       id: 'nfas',
@@ -32,7 +35,27 @@ returns a **set** of states. The **ε-closure** of a state $q$ is the set of sta
           type: 'text',
           md: md`**Example.** "The second-to-last symbol is \`1\`" needs 4 states as a DFA, since it must remember the last two
 symbols. As an NFA it needs 3: stay in the start state on anything, then *guess* that the current \`1\` is the
-second-to-last symbol and check that exactly one more symbol follows.`,
+second-to-last symbol and check that exactly one more symbol follows.
+
+Watch the set of possible states as the machine reads \`0110\`. Every time it reads a \`1\` it keeps one run in
+\`a\` and starts a new run that guesses "this was the second-to-last symbol."`,
+        },
+        {
+          type: 'nfa-trace',
+          id: 'nfa-trace-second-from-end',
+          caption: 'An NFA for "second-to-last symbol is 1", reading 0110',
+          nfa: {
+            states: ['a', 'b', 'c'],
+            alphabet: ['0', '1'],
+            initialState: 'a',
+            acceptStates: ['c'],
+            transitions: {
+              a: { '0': ['a'], '1': ['a', 'b'] },
+              b: { '0': ['c'], '1': ['c'] },
+              c: {},
+            },
+          },
+          input: '0110',
         },
         {
           type: 'membership',
@@ -84,6 +107,28 @@ second-to-last symbol and check that exactly one more symbol follows.`,
   pieces together with ε-transitions. A union branches, a concatenation chains, a star loops.
 - **DFA to regular expression, state elimination.** Allow regular expressions on edges, then delete states one at a
   time and patch the expressions around each removed state, until one edge from start to finish remains.`,
+        },
+        {
+          type: 'text',
+          md: md`The animation below *is* the subset construction, run on a single input. Each set you see is one
+state of the equivalent DFA. This NFA accepts $\texttt{0}^*\texttt{1}^*$, and its ε-transition from \`p\` to
+\`q\` means that, before reading anything, the machine could already be in either state.`,
+        },
+        {
+          type: 'nfa-trace',
+          id: 'nfa-trace-epsilon',
+          caption: 'An NFA with an ε-transition for 0*1*, reading 0011',
+          nfa: {
+            states: ['p', 'q'],
+            alphabet: ['0', '1'],
+            initialState: 'p',
+            acceptStates: ['q'],
+            transitions: {
+              p: { '0': ['p'], '': ['q'] },
+              q: { '1': ['q'] },
+            },
+          },
+          input: '0011',
         },
         {
           type: 'short',

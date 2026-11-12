@@ -1,6 +1,7 @@
 import type { Problem } from '@/types/automata';
 import { evaluateSolution } from '@/lib/logic';
 import type { ActivityBlock, Block, Responses, Section } from './types';
+import { checkTable, derivesTarget } from './exercises';
 
 // Shared by the reader (instant feedback) and the score route (the grade sent to Canvas),
 // so a student can't post a grade without submitting answers that earn it.
@@ -27,7 +28,15 @@ export function gradeActivity(block: ActivityBlock, response: unknown, problems:
     }
     case 'short':
       return typeof response === 'string' && block.answers.some((a) => normalize(a) === normalize(response)) ? 1 : 0;
+    case 'table':
+      return typeof response === 'object' && checkTable(block, response as Record<string, string>).status === 'correct'
+        ? 1
+        : 0;
+    case 'derivation':
+      return derivesTarget(block.grammar, response, block.target) ? 1 : 0;
     case 'trace':
+    case 'nfa-trace':
+    case 'tm-trace':
       return response === true ? 1 : 0;
     case 'lab': {
       const problem = problems[block.problem];

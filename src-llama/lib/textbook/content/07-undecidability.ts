@@ -5,6 +5,9 @@ export const undecidability: Chapter = {
   id: 'undecidability',
   title: 'Undecidability',
   summary: 'Diagonalization, the halting problem, and reductions between problems.',
+  keyIdeas: md`- Machines can be encoded as strings, so they can run on descriptions of other machines, including themselves.
+- Diagonalization shows that self-rejection and the halting problem are undecidable. The halting problem is still acceptable.
+- To prove $B$ undecidable, reduce a known undecidable problem **to** $B$. Rice's theorem covers every nontrivial property of a machine's language.`,
   sections: [
     {
       id: 'halting-problem',

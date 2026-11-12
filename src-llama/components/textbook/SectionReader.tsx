@@ -9,8 +9,11 @@ import { saveSectionScore, useSectionResponses } from '@/lib/textbook/progress';
 import { syncScore, type SyncResult } from '@/lib/lti/client';
 import { Markdown } from './Markdown';
 import { ActivityCard, ChoiceActivity, MembershipActivity, ShortAnswerActivity } from './Activities';
-import { TraceAnimation } from './TraceAnimation';
+import { DfaTrace, NfaTrace, TmTrace } from './TraceAnimation';
 import { LabActivity } from './LabActivity';
+import { TableActivity } from './TableActivity';
+import { DerivationActivity } from './DerivationActivity';
+import { termSlug } from '@/lib/textbook/slug';
 import { useHydrated, useLtiSession } from './useLtiSession';
 
 type NavLink = { href: string; title: string } | null;
@@ -20,30 +23,42 @@ type SectionReaderProps = {
   number: string;
   chapterTitle: string;
   section: Section;
+  keyIdeas?: string;
   problems: Record<string, Problem>;
   prev: NavLink;
   next: NavLink;
 };
 
 const KIND_LABEL: Record<ActivityBlock['type'], string> = {
-  choice: 'Participation activity',
-  membership: 'Participation activity',
-  short: 'Participation activity',
+  choice: 'Multiple choice',
+  membership: 'Classify strings',
+  short: 'Short answer',
+  table: 'Transition table',
+  derivation: 'Derivation',
   trace: 'Animation',
+  'nfa-trace': 'Animation',
+  'tm-trace': 'Animation',
   lab: 'Lab',
 };
+
+const QUESTION_TYPES: Block['type'][] = ['choice', 'membership', 'short', 'table', 'derivation'];
+const isQuestion = (block: Block | undefined) => Boolean(block && QUESTION_TYPES.includes(block.type));
 
 const CALLOUT_STYLE = {
   definition: 'border-arc-700/70 bg-arc-950/30',
   theorem: 'border-gold-700/70 bg-gold-950/30',
   note: 'border-steel-700 bg-steel-900',
+  summary: 'border-crimson-600/70 bg-crimson-950/20',
 };
+
+const CALLOUT_LABEL = { definition: 'Definition', theorem: 'Theorem', note: 'Note', summary: 'Key ideas' };
 
 export const SectionReader: React.FC<SectionReaderProps> = ({
   sectionKey,
   number,
   chapterTitle,
   section,
+  keyIdeas,
   problems,
   prev,
   next,
@@ -85,9 +100,14 @@ export const SectionReader: React.FC<SectionReaderProps> = ({
     if (block.type === 'text') return <Markdown key={i}>{block.md}</Markdown>;
     if (block.type === 'callout') {
       return (
-        <aside key={i} className={`border-l-4 rounded-r-lg px-5 py-4 ${CALLOUT_STYLE[block.kind]}`}>
+        <aside
+          key={i}
+          // Anchor for glossary links, e.g. /book/finite-state-machines/dfas#dfa
+          id={block.title ? termSlug(block.title) : undefined}
+          className={`border-l-4 rounded-r-lg px-5 py-4 scroll-mt-6 ${CALLOUT_STYLE[block.kind]}`}
+        >
           <p className="text-xs font-semibold uppercase tracking-wider text-steel-400 mb-2">
-            {block.kind}
+            {CALLOUT_LABEL[block.kind]}
             {block.title ? `: ${block.title}` : ''}
           </p>
           <Markdown>{block.md}</Markdown>
@@ -100,32 +120,48 @@ export const SectionReader: React.FC<SectionReaderProps> = ({
     const response = responses[block.id];
     const done = (grade.perActivity[block.id] ?? 0) >= 1;
     const onRespond = (value: unknown) => respond(block, value);
+    // A run of questions after the reading gets one "Check your understanding" heading
+    const startsQuestions = isQuestion(block) && !isQuestion(section.blocks[i - 1]);
 
     return (
-      <ActivityCard key={block.id} label={label} kind={KIND_LABEL[block.type]} done={done} points={activityPoints(block)}>
-        {!hydrated ? (
-          <p className="text-sm text-steel-500">Loading activity…</p>
-        ) : block.type === 'choice' ? (
-          <ChoiceActivity block={block} response={response as number | undefined} onRespond={onRespond} />
-        ) : block.type === 'membership' ? (
-          <MembershipActivity block={block} response={response as boolean[] | undefined} onRespond={onRespond} />
-        ) : block.type === 'short' ? (
-          <ShortAnswerActivity block={block} response={response as string | undefined} onRespond={onRespond} />
+      <React.Fragment key={block.id}>
+        {startsQuestions && <h2 className="text-base font-bold text-white -mb-4">Check your understanding</h2>}
+        <ActivityCard label={label} kind={KIND_LABEL[block.type]} done={done} points={activityPoints(block)}>
+          {!hydrated ? (
+            <p className="text-sm text-steel-500">Loading activity…</p>
+          ) : block.type === 'choice' ? (
+            <ChoiceActivity block={block} response={response as number | undefined} onRespond={onRespond} />
+          ) : block.type === 'membership' ? (
+            <MembershipActivity block={block} response={response as boolean[] | undefined} onRespond={onRespond} />
+          ) : block.type === 'short' ? (
+            <ShortAnswerActivity block={block} response={response as string | undefined} onRespond={onRespond} />
+          ) : block.type === 'table' ? (
+          <TableActivity block={block} response={response as Record<string, string> | undefined} onRespond={onRespond} />
+        ) : block.type === 'derivation' ? (
+          <DerivationActivity block={block} response={response as string[] | undefined} onRespond={onRespond} />
         ) : block.type === 'trace' ? (
-          <TraceAnimation block={block} watched={response === true} onWatched={() => onRespond(true)} />
-        ) : (
-          <LabActivity problem={problems[block.problem]} passed={done} onSubmit={onRespond} />
-        )}
-      </ActivityCard>
+            <DfaTrace block={block} watched={response === true} onWatched={() => onRespond(true)} />
+          ) : block.type === 'nfa-trace' ? (
+            <NfaTrace block={block} watched={response === true} onWatched={() => onRespond(true)} />
+          ) : block.type === 'tm-trace' ? (
+            <TmTrace block={block} watched={response === true} onWatched={() => onRespond(true)} />
+          ) : (
+            <LabActivity problem={problems[block.problem]} passed={done} onSubmit={onRespond} />
+          )}
+        </ActivityCard>
+      </React.Fragment>
     );
   };
+
+  const activityTotal = labels.size;
+  const activitiesDone = Object.values(grade.perActivity).filter((credit) => credit >= 1).length;
 
   return (
     <article className="flex flex-col gap-8 min-w-0">
       <header className="flex flex-col gap-3 border-b border-steel-800 pb-6">
         <p className="text-xs font-semibold uppercase tracking-wider text-crimson-300">{chapterTitle}</p>
         <h1 className="text-3xl font-extrabold text-white tracking-tight">
-          <span className="font-mono text-gold-400 mr-3">{number}</span>
+          <span className="font-mono text-gold-400 mr-3">{number}.</span>
           {section.title}
         </h1>
         {grade.total > 0 && (
@@ -155,6 +191,45 @@ export const SectionReader: React.FC<SectionReaderProps> = ({
       </header>
 
       {section.blocks.map(renderBlock)}
+
+      {keyIdeas && (
+        <aside className={`border-l-4 rounded-r-lg px-5 py-4 ${CALLOUT_STYLE.summary}`}>
+          <p className="text-xs font-semibold uppercase tracking-wider text-steel-400 mb-2">
+            {CALLOUT_LABEL.summary}: {chapterTitle}
+          </p>
+          <Markdown>{keyIdeas}</Markdown>
+        </aside>
+      )}
+
+      {activityTotal > 0 && hydrated && (
+        <p className="text-sm text-steel-400 text-center">
+          {activitiesDone === activityTotal
+            ? `You've completed all ${activityTotal} activities on this page.`
+            : `You've completed ${activitiesDone} of ${activityTotal} activities on this page.`}
+        </p>
+      )}
+
+      {/* Previous / next arrows pinned to the page edges on very wide screens, where the margins are empty */}
+      {prev && (
+        <Link
+          href={prev.href}
+          aria-label={`Previous: ${prev.title}`}
+          title={prev.title}
+          className="hidden 2xl:flex fixed left-3 top-1/2 -translate-y-1/2 w-10 h-16 items-center justify-center rounded-lg border border-steel-800 bg-steel-900/80 text-steel-400 hover:text-white hover:border-steel-600 text-xl"
+        >
+          &lsaquo;
+        </Link>
+      )}
+      {next && (
+        <Link
+          href={next.href}
+          aria-label={`Next: ${next.title}`}
+          title={next.title}
+          className="hidden 2xl:flex fixed right-3 top-1/2 -translate-y-1/2 w-10 h-16 items-center justify-center rounded-lg border border-steel-800 bg-steel-900/80 text-steel-400 hover:text-white hover:border-steel-600 text-xl"
+        >
+          &rsaquo;
+        </Link>
+      )}
 
       <nav className="flex justify-between gap-4 border-t border-steel-800 pt-6 text-sm">
         {prev ? (

@@ -1,10 +1,27 @@
-import type { Chapter } from '../types';
+import type { Chapter, TuringMachine } from '../types';
 import { md } from '../md';
+
+// Decides 0ⁿ1ⁿ by crossing off one 0 (X) and one 1 (Y) per pass
+const ZERO_N_ONE_N: TuringMachine = {
+  start: 'q0',
+  accept: 'accept',
+  reject: 'reject',
+  blank: '□',
+  transitions: {
+    q0: { '0': ['q1', 'X', 'R'], Y: ['q3', 'Y', 'R'], '□': ['accept', '□', 'R'] },
+    q1: { '0': ['q1', '0', 'R'], Y: ['q1', 'Y', 'R'], '1': ['q2', 'Y', 'L'] },
+    q2: { '0': ['q2', '0', 'L'], Y: ['q2', 'Y', 'L'], X: ['q0', 'X', 'R'] },
+    q3: { Y: ['q3', 'Y', 'R'], '□': ['accept', '□', 'R'] },
+  },
+};
 
 export const turingMachines: Chapter = {
   id: 'turing-machines',
   title: 'Turing machines',
   summary: 'An unbounded tape and a read-write head: the standard model of general computation.',
+  keyIdeas: md`- A Turing machine reads and writes an unbounded tape and moves its head either way. It can accept, reject or run forever.
+- Decidable languages have machines that halt on every input; acceptable ones only need to accept their members.
+- Extra tapes and other variations change speed, not power. That robustness backs the Church–Turing thesis.`,
   sections: [
     {
       id: 'definitions',
@@ -33,8 +50,36 @@ $$\delta : (Q \setminus \{\text{accept}, \text{reject}\}) \times \Gamma \to Q \t
 or **runs forever**. A language is **acceptable** (recursively enumerable) if some machine accepts exactly its
 strings, and **decidable** if some machine accepts its strings *and halts on every input*.
 
-A standard first example decides $\{\texttt{0}^n\texttt{1}^n\}$: repeatedly cross off the leftmost \`0\` and the
-leftmost \`1\`, and accept if both run out at the same time.`,
+A standard first example decides $\{\texttt{0}^n\texttt{1}^n\}$: repeatedly cross off the leftmost \`0\` (write
+\`X\`) and the leftmost \`1\` (write \`Y\`), and accept if both run out at the same time. The states have jobs:
+
+| State | Job |
+|---|---|
+| \`q0\` | Cross off the next \`0\`, or check that only \`Y\`s are left |
+| \`q1\` | Scan right to the first \`1\` and cross it off |
+| \`q2\` | Scan back left to the last \`X\` |
+| \`q3\` | Confirm nothing but \`Y\`s remains before the blank |`,
+        },
+        {
+          type: 'tm-trace',
+          id: 'tm-trace-0n1n',
+          caption: 'A Turing machine deciding 0ⁿ1ⁿ, running on 0011',
+          machine: ZERO_N_ONE_N,
+          input: '0011',
+        },
+        {
+          type: 'tm-trace',
+          id: 'tm-trace-0n1n-reject',
+          caption: 'The same machine on 0010: watch where it gets stuck',
+          machine: ZERO_N_ONE_N,
+          input: '0010',
+        },
+        {
+          type: 'short',
+          id: 'tm-trace-xs',
+          prompt: md`When the machine accepts \`0011\`, how many \`X\`s are on the tape?`,
+          answers: ['2', 'two'],
+          explain: md`One \`X\` for each \`0\` it crossed off.`,
         },
         {
           type: 'choice',

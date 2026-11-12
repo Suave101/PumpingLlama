@@ -5,6 +5,9 @@ export const strings: Chapter = {
   id: 'strings',
   title: 'Strings',
   summary: 'Recursive definitions of strings, length and concatenation, and how to prove things about them by induction.',
+  keyIdeas: md`- A string is either $\varepsilon$ or a symbol followed by a string. Every string is finite, but $\Sigma^*$ is infinite.
+- Length, concatenation and reversal are defined by recursion on that structure.
+- Proofs about all strings use induction with the same two cases, assuming the claim for every shorter string.`,
   sections: [
     {
       id: 'strings-and-alphabets',

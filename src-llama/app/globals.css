@@ -80,7 +80,7 @@ body {
   margin-top: 1em;
 }
 .book-prose strong {
-  color: #fff;
+  color: var(--color-white);
   font-weight: 600;
 }
 .book-prose code {
@@ -131,4 +131,137 @@ body {
 }
 .book-prose-inline {
   line-height: 1.6;
+}
+
+/* Reading modes for the textbook (components/textbook/ReadingSurface.tsx).
+   "paper" is a light book page: every palette is mirrored (50 <-> 950, 100 <-> 900, ...) so the
+   same Tailwind classes work in both modes. Generated from the @theme values above and Tailwind's red. */
+[data-reading="paper"] {
+  color-scheme: light;
+  --color-white: #1a1c21;
+  --color-crimson-50: #2b060c;
+  --color-crimson-100: #4d0d17;
+  --color-crimson-200: #6e1220;
+  --color-crimson-300: #8a1526;
+  --color-crimson-400: #a6192e;
+  --color-crimson-500: #c8243d;
+  --color-crimson-600: #df5468;
+  --color-crimson-700: #ec8e9b;
+  --color-crimson-800: #f5c0c7;
+  --color-crimson-900: #fbe2e5;
+  --color-crimson-950: #fdf2f3;
+  --color-gold-50: #2a1c08;
+  --color-gold-100: #4a3210;
+  --color-gold-200: #6f4a12;
+  --color-gold-300: #976512;
+  --color-gold-400: #c08414;
+  --color-gold-500: #e0a21b;
+  --color-gold-600: #f0b72f;
+  --color-gold-700: #f7cd57;
+  --color-gold-800: #fbe08a;
+  --color-gold-900: #fdf1c7;
+  --color-gold-950: #fffaeb;
+  --color-steel-50: #0e0f12;
+  --color-steel-100: #1a1c21;
+  --color-steel-200: #2a2e34;
+  --color-steel-300: #3f444c;
+  --color-steel-400: #535962;
+  --color-steel-500: #69707a;
+  --color-steel-600: #878d96;
+  --color-steel-700: #aeb3ba;
+  --color-steel-800: #cfd2d6;
+  --color-steel-900: #e9eaec;
+  --color-steel-950: #f6f6f7;
+  --color-arc-50: #06373c;
+  --color-arc-100: #15545a;
+  --color-arc-200: #16656c;
+  --color-arc-300: #147f87;
+  --color-arc-400: #13a1aa;
+  --color-arc-500: #1fc8d1;
+  --color-arc-600: #4fe3ea;
+  --color-arc-700: #8cf1f5;
+  --color-arc-800: #a2f6fa;
+  --color-arc-900: #cbfbfd;
+  --color-arc-950: #ecfeff;
+  --color-red-50: oklch(25.8% 0.092 26.042);
+  --color-red-100: oklch(39.6% 0.141 25.723);
+  --color-red-200: oklch(44.4% 0.177 26.899);
+  --color-red-300: oklch(50.5% 0.213 27.518);
+  --color-red-400: oklch(57.7% 0.245 27.325);
+  --color-red-500: oklch(63.7% 0.237 25.331);
+  --color-red-600: oklch(70.4% 0.191 22.216);
+  --color-red-700: oklch(80.8% 0.114 19.571);
+  --color-red-800: oklch(88.5% 0.062 18.334);
+  --color-red-900: oklch(93.6% 0.032 17.717);
+  --color-red-950: oklch(97.1% 0.013 17.38);
+}
+
+/* Primary buttons stay deep crimson with white text instead of following the mirrored palette */
+[data-reading="paper"] .bg-crimson-600.text-white {
+  background-color: #a6192e;
+  color: #fff;
+}
+[data-reading="paper"] .bg-crimson-600.text-white:hover {
+  background-color: #c8243d;
+}
+
+/* Labs keep the dark workbench look inside a paper page */
+[data-reading="paper"] .reading-night {
+  color-scheme: dark;
+  --color-white: #fff;
+  --color-crimson-50: #fdf2f3;
+  --color-crimson-100: #fbe2e5;
+  --color-crimson-200: #f5c0c7;
+  --color-crimson-300: #ec8e9b;
+  --color-crimson-400: #df5468;
+  --color-crimson-500: #c8243d;
+  --color-crimson-600: #a6192e;
+  --color-crimson-700: #8a1526;
+  --color-crimson-800: #6e1220;
+  --color-crimson-900: #4d0d17;
+  --color-crimson-950: #2b060c;
+  --color-gold-50: #fffaeb;
+  --color-gold-100: #fdf1c7;
+  --color-gold-200: #fbe08a;
+  --color-gold-300: #f7cd57;
+  --color-gold-400: #f0b72f;
+  --color-gold-500: #e0a21b;
+  --color-gold-600: #c08414;
+  --color-gold-700: #976512;
+  --color-gold-800: #6f4a12;
+  --color-gold-900: #4a3210;
+  --color-gold-950: #2a1c08;
+  --color-steel-50: #f6f6f7;
+  --color-steel-100: #e9eaec;
+  --color-steel-200: #cfd2d6;
+  --color-steel-300: #aeb3ba;
+  --color-steel-400: #878d96;
+  --color-steel-500: #69707a;
+  --color-steel-600: #535962;
+  --color-steel-700: #3f444c;
+  --color-steel-800: #2a2e34;
+  --color-steel-900: #1a1c21;
+  --color-steel-950: #0e0f12;
+  --color-arc-50: #ecfeff;
+  --color-arc-100: #cbfbfd;
+  --color-arc-200: #a2f6fa;
+  --color-arc-300: #8cf1f5;
+  --color-arc-400: #4fe3ea;
+  --color-arc-500: #1fc8d1;
+  --color-arc-600: #13a1aa;
+  --color-arc-700: #147f87;
+  --color-arc-800: #16656c;
+  --color-arc-900: #15545a;
+  --color-arc-950: #06373c;
+  --color-red-50: oklch(97.1% 0.013 17.38);
+  --color-red-100: oklch(93.6% 0.032 17.717);
+  --color-red-200: oklch(88.5% 0.062 18.334);
+  --color-red-300: oklch(80.8% 0.114 19.571);
+  --color-red-400: oklch(70.4% 0.191 22.216);
+  --color-red-500: oklch(63.7% 0.237 25.331);
+  --color-red-600: oklch(57.7% 0.245 27.325);
+  --color-red-700: oklch(50.5% 0.213 27.518);
+  --color-red-800: oklch(44.4% 0.177 26.899);
+  --color-red-900: oklch(39.6% 0.141 25.723);
+  --color-red-950: oklch(25.8% 0.092 26.042);
 }

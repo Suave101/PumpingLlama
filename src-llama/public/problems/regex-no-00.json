@@ -1,0 +1,26 @@
+{
+  "id": "regex-no-00",
+  "type": "regex-construction",
+  "title": "Regex: No Two 0s in a Row",
+  "description": "Write a regular expression over alphabet {0, 1} for the strings that never contain \"00\" as a substring.",
+  "alphabet": ["0", "1"],
+  "answerDFA": {
+    "states": ["ok", "after0", "dead"],
+    "alphabet": ["0", "1"],
+    "initialState": "ok",
+    "acceptStates": ["ok", "after0"],
+    "transitions": {
+      "ok": { "0": "after0", "1": "ok" },
+      "after0": { "0": "dead", "1": "ok" },
+      "dead": { "0": "dead", "1": "dead" }
+    }
+  },
+  "testCases": [
+    { "input": "", "expected": true },
+    { "input": "010", "expected": true },
+    { "input": "1101", "expected": true },
+    { "input": "00", "expected": false },
+    { "input": "1001", "expected": false },
+    { "input": "000", "expected": false }
+  ]
+}

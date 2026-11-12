@@ -1,5 +1,6 @@
 import type { Book, Chapter, Section } from './types';
 import { isActivity } from './grading';
+import { termSlug } from './slug';
 import { strings } from './content/01-strings';
 import { regularLanguages } from './content/02-regular-languages';
 import { finiteStateMachines } from './content/03-finite-state-machines';
@@ -54,6 +55,12 @@ export function findSection(chapterId: string, sectionId: string): SectionRef | 
   return allSections().find((s) => s.chapter.id === chapterId && s.section.id === sectionId);
 }
 
+// A chapter's key ideas close its last reading section, so they come right before the exercises
+export function keyIdeasFor(ref: SectionRef): string | undefined {
+  const reading = ref.chapter.sections.filter((s) => s.id !== 'exercises');
+  return reading[reading.length - 1]?.id === ref.section.id ? ref.chapter.keyIdeas : undefined;
+}
+
 export function findSectionByKey(key: string): SectionRef | undefined {
   return allSections().find((s) => s.key === key);
 }
@@ -65,6 +72,35 @@ export function labProblems(section: Section): string[] {
 
 export function activityCount(section: Section): number {
   return section.blocks.filter(isActivity).length;
+}
+
+export type GlossaryEntry = {
+  term: string;
+  kind: 'definition' | 'theorem';
+  md: string;
+  section: string;
+  href: string;
+};
+
+// Every titled definition and theorem in the book, alphabetical, linking to where it's introduced
+export function glossary(): GlossaryEntry[] {
+  return allSections()
+    .flatMap((ref) =>
+      ref.section.blocks.flatMap((block) =>
+        block.type === 'callout' && block.title && (block.kind === 'definition' || block.kind === 'theorem')
+          ? [
+              {
+                term: block.title,
+                kind: block.kind,
+                md: block.md,
+                section: `${ref.chapterNumber}.${ref.sectionNumber} ${ref.section.title}`,
+                href: `${ref.href}#${termSlug(block.title)}`,
+              },
+            ]
+          : []
+      )
+    )
+    .sort((a, b) => a.term.localeCompare(b.term, 'en', { sensitivity: 'base' }));
 }
 
 // Plain data for the table of contents (safe to pass to client components)

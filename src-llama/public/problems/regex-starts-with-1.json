@@ -1,0 +1,26 @@
+{
+  "id": "regex-starts-with-1",
+  "type": "regex-construction",
+  "title": "Regex: Starts with \"1\"",
+  "description": "Write a regular expression over alphabet {0, 1} for the strings that start with \"1\".",
+  "alphabet": ["0", "1"],
+  "answerDFA": {
+    "states": ["s", "yes", "no"],
+    "alphabet": ["0", "1"],
+    "initialState": "s",
+    "acceptStates": ["yes"],
+    "transitions": {
+      "s": { "0": "no", "1": "yes" },
+      "yes": { "0": "yes", "1": "yes" },
+      "no": { "0": "no", "1": "no" }
+    }
+  },
+  "testCases": [
+    { "input": "1", "expected": true },
+    { "input": "10", "expected": true },
+    { "input": "111", "expected": true },
+    { "input": "", "expected": false },
+    { "input": "0", "expected": false },
+    { "input": "01", "expected": false }
+  ]
+}

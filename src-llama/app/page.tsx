@@ -7,7 +7,7 @@ import { LogoMark } from '@/components/site/Logo';
 const STEPS = [
   {
     title: 'Read a short section',
-    body: 'Each idea is followed right away by a participation activity or an animation you step through.',
+    body: 'Each idea is followed right away by a question to check your understanding or an animation you step through.',
   },
   {
     title: 'Build your answer in a lab',
