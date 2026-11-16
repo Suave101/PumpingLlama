@@ -104,6 +104,69 @@ A standard first example decides $\{\texttt{0}^n\texttt{1}^n\}$: repeatedly cros
       ],
     },
     {
+      id: 'simulator',
+      title: 'Build and run your own machine',
+      blocks: [
+        {
+          type: 'text',
+          md: md`The best way to understand Turing machines is to write a few. The simulator below runs any single-tape
+machine you describe, on any input you type. Each line of the machine is one transition, written the way we have
+been writing them:
+
+\`\`\`
+q1, 0 -> q1, 0, R     # in q1 reading 0: stay in q1, write 0, move right
+q1, 1 -> q2, Y, L     # in q1 reading 1: go to q2, write Y, move left
+\`\`\`
+
+The machine starts in the state named by \`start:\` (or the first rule's state), and halts when it enters \`accept\`
+or \`reject\`. If no rule matches the current state and symbol, the machine rejects, so you only need to write the
+transitions that matter. Use \`_\` for a blank cell.
+
+Pick a starting machine from the menu, press **Run**, then step through it or press **Play**. The highlighted rule in
+the rule list is the one about to fire.`,
+        },
+        { type: 'tm-playground', preset: 'zero-n-one-n' },
+        {
+          type: 'callout',
+          kind: 'note',
+          title: 'Try these',
+          md: md`1. Load **0ⁿ1ⁿ** and run it on \`0101\`. Which rule is missing when it rejects?
+2. Load **Add one** and run it on \`111\` (that is $7$, written least significant bit first). Read the answer off the tape.
+3. Change **0ⁿ1ⁿ** so that it accepts $\{\texttt{0}^n\texttt{1}^{2n}\}$: cross off two \`1\`s for every \`0\`.
+4. Write a machine that accepts binary strings with an even number of \`1\`s *without ever moving left*. What kind
+   of machine from earlier chapters have you just built?`,
+        },
+        {
+          type: 'short',
+          id: 'simulator-increment',
+          prompt: md`Run **Add one** on \`111\`. What is on the tape when it accepts?`,
+          answers: ['0001'],
+          explain: md`The carry turns each \`1\` into \`0\` and finally writes a \`1\` on the first blank. Least significant bit first, \`0001\` is $8 = 7 + 1$.`,
+        },
+        {
+          type: 'short',
+          id: 'simulator-palindrome-stuck',
+          prompt: md`Run **Palindromes** on \`aab\`. In which state is the machine when it finds no rule and rejects?`,
+          answers: ['ca'],
+          explain: md`It erases the first \`a\`, runs right to the end in \`ra\`, steps back into \`ca\` and reads \`b\`. State \`ca\` expects an \`a\`, so there is no rule.`,
+        },
+        {
+          type: 'choice',
+          id: 'simulator-gives-up',
+          prompt: md`On the **Runs forever** machine, the simulator stops after a fixed number of steps and says it has no answer, instead of reporting "this machine loops". Why?`,
+          choices: [
+            { text: 'The simulator runs out of memory', explain: md`The step limit is chosen long before memory becomes an issue.` },
+            {
+              text: 'No program can decide, for every machine and input, whether the machine will halt',
+              correct: true,
+              explain: md`Right. This particular loop is easy to spot, but the halting problem (Chapter 7) shows that no simulator can detect every infinite run.`,
+            },
+            { text: 'Machines that loop always reject eventually', explain: md`A looping machine never enters reject; it simply never halts.` },
+          ],
+        },
+      ],
+    },
+    {
       id: 'variations',
       title: 'Variations and the Church–Turing thesis',
       blocks: [

@@ -34,7 +34,7 @@ export function handOffPage(clientSession: unknown, path: string): Response {
   );
 }
 
-export function errorPage(status: number, message: string): Response {
-  const res = page(`<h1 style="font-size:18px">Canvas launch failed</h1><p>${escapeHtml(message)}</p>`);
+export function errorPage(status: number, message: string, title = 'Canvas launch failed'): Response {
+  const res = page(`<h1 style="font-size:18px">${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p>`);
   return new Response(res.body, { status, headers: res.headers });
 }

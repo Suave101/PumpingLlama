@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { LogoMark } from './Logo';
+import { CanvasAccount } from './CanvasAccount';
 
 type NavPage = 'home' | 'book' | 'problems' | 'instructors';
 
@@ -26,6 +27,7 @@ export const SiteNav: React.FC<{ current?: NavPage; wide?: boolean }> = ({ curre
         <Link href="/instructors" className={linkClass(current === 'instructors')}>
           Instructors
         </Link>
+        <CanvasAccount />
       </div>
     </nav>
   );

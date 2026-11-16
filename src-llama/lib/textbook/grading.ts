@@ -9,7 +9,7 @@ import { checkTable, derivesTarget } from './exercises';
 export type LabSubmission = Parameters<typeof evaluateSolution>[0];
 
 export const isActivity = (block: Block): block is ActivityBlock =>
-  block.type !== 'text' && block.type !== 'callout';
+  block.type !== 'text' && block.type !== 'callout' && block.type !== 'tm-playground';
 
 export const activityPoints = (block: ActivityBlock): number => block.points ?? (block.type === 'lab' ? 5 : 1);
 

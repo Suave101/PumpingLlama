@@ -1,1 +1,4 @@
-﻿{ "version": "0.0.1", "configurations": [ { "name": "next-dev", "runtimeExecutable": "npm", "runtimeArgs": ["--prefix", "src-llama", "run", "dev"], "port": 3000 } ] }
+﻿{ "version": "0.0.1", "configurations": [
+  { "name": "next-dev", "runtimeExecutable": "npm", "runtimeArgs": ["--prefix", "src-llama", "run", "dev"], "port": 3000 },
+  { "name": "next-dev-3100", "runtimeExecutable": "npm", "runtimeArgs": ["--prefix", "src-llama", "run", "dev", "--", "-p", "3100"], "port": 3100 }
+] }

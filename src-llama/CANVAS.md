@@ -44,3 +44,23 @@ When the `lti_state` cookie does get through, it is checked as well.
   change on every restart, which breaks open sessions and score passback.
 - One Canvas platform per deployment. Supporting several institutions means keying `lib/lti/config.ts` by issuer and
   client id instead of reading single environment variables.
+
+## Log in with Canvas (outside an LTI launch)
+
+Students who open the site directly can sign in with their Canvas account from the button in the site nav.
+This uses Canvas's OAuth2 web flow with a separate **API** developer key.
+
+| Route | Purpose |
+|---|---|
+| `GET /api/auth/canvas/login?returnTo=/path` | Redirects to `<CANVAS_URL>/login/oauth2/auth` with a signed `state` |
+| `GET /api/auth/canvas/callback` | Exchanges the code, reads the user Canvas returns with the token, revokes the token, sets the login cookie |
+| `GET /api/auth/session` | `{ enabled, user }` for the nav button |
+| `DELETE /api/auth/session` | Logs out |
+
+Setup: in Canvas, go to Admin > Developer Keys > + Developer Key > + API Key. Set the Redirect URI to
+`<site URL>/api/auth/canvas/callback` and turn the key on. Then set `CANVAS_URL` (for example
+`https://school.instructure.com`), `CANVAS_OAUTH_CLIENT_ID` and `CANVAS_OAUTH_CLIENT_SECRET`.
+
+The login is a first-party `HttpOnly`, `SameSite=Lax` cookie signed with `LTI_SESSION_SECRET`, valid for two weeks.
+It only identifies the student. Grades still reach the gradebook only through LTI launches, because a direct login
+has no assignment line item to post to.

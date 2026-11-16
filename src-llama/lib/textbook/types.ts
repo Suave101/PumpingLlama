@@ -109,6 +109,10 @@ export type DerivationBlock = {
 // Lab: one of the graded problems from public/problems, solved in the full workspace
 export type LabBlock = { type: 'lab'; id: string; problem: string; points?: number };
 
+// Ungraded sandbox: write a Turing machine as text and run it on any input.
+// `preset` picks the starting machine from TM_PRESETS (lib/textbook/tm-text.ts).
+export type TmPlaygroundBlock = { type: 'tm-playground'; preset?: string };
+
 export type AnimationBlock = TraceBlock | NfaTraceBlock | TmTraceBlock;
 export type ActivityBlock =
   | ChoiceBlock
@@ -118,7 +122,7 @@ export type ActivityBlock =
   | DerivationBlock
   | AnimationBlock
   | LabBlock;
-export type Block = TextBlock | CalloutBlock | ActivityBlock;
+export type Block = TextBlock | CalloutBlock | TmPlaygroundBlock | ActivityBlock;
 
 export type Section = { id: string; title: string; blocks: Block[] };
 export type Chapter = {

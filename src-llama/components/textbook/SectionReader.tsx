@@ -13,6 +13,7 @@ import { DfaTrace, NfaTrace, TmTrace } from './TraceAnimation';
 import { LabActivity } from './LabActivity';
 import { TableActivity } from './TableActivity';
 import { DerivationActivity } from './DerivationActivity';
+import { TmPlayground } from './TmPlayground';
 import { termSlug } from '@/lib/textbook/slug';
 import { useHydrated, useLtiSession } from './useLtiSession';
 
@@ -114,6 +115,7 @@ export const SectionReader: React.FC<SectionReaderProps> = ({
         </aside>
       );
     }
+    if (block.type === 'tm-playground') return <TmPlayground key={i} block={block} />;
     if (!isActivity(block)) return null;
 
     const label = labels.get(block.id) ?? number;
